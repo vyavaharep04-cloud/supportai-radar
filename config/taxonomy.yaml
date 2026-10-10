@@ -1,0 +1,84 @@
+version: 1
+
+departments:
+  - id: payments_billing
+    display_name: "Payments & Billing"
+
+  - id: technical_support
+    display_name: "Technical Support"
+
+  - id: account_security
+    display_name: "Account & Security"
+
+  - id: orders_delivery
+    display_name: "Orders & Delivery"
+
+  - id: human_review
+    display_name: "Human Review"
+
+issue_types:
+  - id: payment_failed
+    display_name: "Payment Failed"
+    description: "A payment attempt failed or was unsuccessful."
+    department: payments_billing
+    incident_group: payment_checkout
+
+  - id: money_deducted_no_order
+    display_name: "Money Deducted, No Order"
+    description: "Money was deducted but the order was not created or confirmed."
+    department: payments_billing
+    incident_group: payment_checkout
+
+  - id: double_charge
+    display_name: "Double Charge"
+    description: "The customer appears to have been charged more than once."
+    department: payments_billing
+    incident_group: payment_checkout
+
+  - id: checkout_error
+    display_name: "Checkout Error"
+    description: "An error prevents the customer from completing checkout."
+    department: technical_support
+    incident_group: payment_checkout
+
+  - id: refund_pending
+    display_name: "Refund Pending"
+    description: "The customer is waiting for a refund or refund status update."
+    department: payments_billing
+    incident_group: refunds
+
+  - id: unauthorized_activity
+    display_name: "Unauthorized Activity"
+    description: "The customer reports suspicious or unauthorized account activity."
+    department: account_security
+    incident_group: account_access_security
+
+  - id: login_problem
+    display_name: "Login Problem"
+    description: "The customer cannot log in or access their account."
+    department: account_security
+    incident_group: account_access_security
+
+  - id: order_delay
+    display_name: "Order Delay"
+    description: "An order has not arrived within the expected delivery time."
+    department: orders_delivery
+    incident_group: orders_delivery
+
+  - id: wrong_damaged_item
+    display_name: "Wrong or Damaged Item"
+    description: "The delivered item is incorrect, damaged, or defective."
+    department: orders_delivery
+    incident_group: orders_delivery
+
+  - id: cancel_modify_order
+    display_name: "Cancel or Modify Order"
+    description: "The customer wants to cancel or change an existing order."
+    department: orders_delivery
+    incident_group: orders_delivery
+
+  - id: other
+    display_name: "Other"
+    description: "The ticket does not fit a supported issue type."
+    department: human_review
+    incident_group: null
