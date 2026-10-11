@@ -68,3 +68,21 @@ def test_empty_or_missing_text_returns_empty_lists():
     assert extract_entities("") == expected
     assert extract_entities("   ") == expected
     assert extract_entities(None) == expected
+
+def test_ordinary_words_are_not_extracted_as_order_ids():
+    assert extract_entities("order nahi aaya")["order_ids"] == []
+    assert extract_entities("my order delayed")["order_ids"] == []
+
+
+def test_ordinary_words_are_not_extracted_as_transaction_ids():
+    assert extract_entities("transaction failed")["transaction_ids"] == []
+    assert extract_entities("I was refunded twice")["transaction_ids"] == []
+
+
+def test_valid_identifiers_still_extract_correctly():
+    result = extract_entities(
+        "Order ORD123456. Transaction UTR987654321."
+    )
+
+    assert result["order_ids"] == ["ORD123456"]
+    assert result["transaction_ids"] == ["UTR987654321"]

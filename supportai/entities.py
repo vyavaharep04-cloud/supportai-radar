@@ -7,14 +7,16 @@ from typing import Any
 
 
 # Matches common order identifiers such as ORD123456 or ORDER-123456.
+
 ORDER_ID_PATTERN = re.compile(
-    r"\b(?:ORDER|ORD)[\s:#_-]*([A-Z0-9-]{4,})\b",
+    r"\b(?:ORDER[\s:#_-]+|ORD[\s:#_-]*)"
+    r"([A-Z0-9-]*\d[A-Z0-9-]*)\b",
     re.IGNORECASE,
 )
 
-# Matches UTR and transaction/reference identifiers.
 TRANSACTION_ID_PATTERN = re.compile(
-    r"\b(?:UTR|TXN|TRANSACTION|REF)[\s:#_-]*([A-Z0-9-]{5,})\b",
+    r"\b(?:TRANSACTION[\s:#_-]+|UTR|TXN|REF)[\s:#_-]*"
+    r"([A-Z0-9-]*\d[A-Z0-9-]*)\b",
     re.IGNORECASE,
 )
 

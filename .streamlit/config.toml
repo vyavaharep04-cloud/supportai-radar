@@ -1,0 +1,20 @@
+# Local-only Streamlit settings for SupportAI Radar.
+[browser]
+gatherUsageStats = false
+
+[client]
+toolbarMode = "minimal"
+
+[theme]
+base = "light"
+primaryColor = "#0F766E"
+backgroundColor = "#F3F5F9"
+secondaryBackgroundColor = "#E9EEF5"
+textColor = "#0F172A"
+font = "sans serif"
+
+[theme.sidebar]
+backgroundColor = "#0B1B2B"
+secondaryBackgroundColor = "#14283D"
+textColor = "#E6EDF5"
+primaryColor = "#2DD4BF"
