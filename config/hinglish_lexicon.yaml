@@ -1,0 +1,550 @@
+# SupportAI Radar - Hinglish normalization lexicon.
+#
+# Used ONLY to build the classifier's text view (see supportai/normalizer.py).
+# Entity extraction and urgency scoring read the raw text instead.
+#
+# How matching works
+#   * Text is lowercased and stripped of punctuation first, so variants are written
+#     in lowercase letters/apostrophes only (no digits, no punctuation, no run of
+#     3+ identical letters - those are collapsed before matching).
+#   * Whole words only; the longest phrase wins; replacements are never re-scanned.
+#   * Every variant must be unique across the file, and every canonical form must
+#     survive normalization unchanged. The loader rejects the file otherwise.
+#   * Digits, amounts, IDs, URLs and e-mails are protected and never rewritten.
+#   * Romanized Hinglish only. Devanagari text passes through unchanged.
+#   * Every string is quoted on purpose: bare no/on/off would be read as booleans.
+#
+# kind is implied by the section: `phrases` = 2+ words, `tokens` = exactly 1 word.
+# Rule ids describe the rule; they never reference the issue taxonomy.
+
+version: 1
+
+settings:
+  elongation_min_run: 3
+
+phrases:
+  # ---- money deducted / charged -------------------------------------------
+  - id: deducted_kat_gaya
+    canonical: "deducted"
+    variants: ["kat gaya", "kat gaye", "kat gayi", "kat gya", "kat gye", "kat gai"]
+
+  - id: deducted_cut_debit_ho_gaya
+    canonical: "deducted"
+    variants:
+      - "cut ho gaya"
+      - "cut ho gaye"
+      - "cut ho gayi"
+      - "cut ho gya"
+      - "cut ho gye"
+      - "cut hogaya"
+      - "cut hogaye"
+      - "cut hogya"
+      - "cut hua"
+      - "cut hui"
+      - "debit ho gaya"
+      - "debit ho gaye"
+      - "debit ho gayi"
+      - "debit ho gya"
+      - "debit hogaya"
+      - "debit hua"
+      - "debit hui"
+      - "deduct ho gaya"
+      - "deduct ho gaye"
+      - "deduct ho gayi"
+      - "deduct hua"
+
+  - id: withdrawn_nikal_gaya
+    canonical: "withdrawn"
+    variants: ["nikal gaya", "nikal gaye", "nikal gayi", "nikal gya", "nikal gye"]
+
+  - id: failed_ho_gaya
+    canonical: "failed"
+    variants:
+      - "fail ho gaya"
+      - "fail ho gaye"
+      - "fail ho gayi"
+      - "fail ho gya"
+      - "fail ho gyi"
+      - "fail hogaya"
+      - "fail hogya"
+      - "fail hua"
+      - "fail hui"
+
+  # ---- repetition / timing ------------------------------------------------
+  - id: twice_do_baar
+    canonical: "twice"
+    variants: ["do baar", "do bar"]
+
+  - id: repeatedly_baar_baar
+    canonical: "repeatedly"
+    variants: ["baar baar", "bar bar", "bar baar", "baar bar"]
+
+  - id: again_phir_se
+    canonical: "again"
+    variants: ["phir se", "fir se", "phir say", "fir say"]
+
+  - id: still_abhi_tak
+    canonical: "still"
+    variants: ["abhi tak", "abhi tk", "ab tak", "ab tk"]
+
+  - id: by_when_kab_tak
+    canonical: "by when"
+    variants: ["kab tak", "kb tak", "kab tk"]
+
+  # ---- negated status ("not working", "not opening", ...) -----------------
+  - id: not_working
+    canonical: "not working"
+    variants:
+      - "chal nahi raha"
+      - "chal nhi raha"
+      - "chal nahi rha"
+      - "chal nhi rha"
+      - "chal nahi rahi"
+      - "chal nhi rahi"
+      - "nahi chal raha"
+      - "nhi chal raha"
+      - "nahi chal rha"
+      - "nhi chal rha"
+      - "nahi chal rahi"
+      - "nhi chal rahi"
+      - "chalta nahi"
+      - "chalta nhi"
+      - "nahi chalta"
+      - "nhi chalta"
+      - "kaam nahi kar raha"
+      - "kaam nhi kar raha"
+      - "kaam nahi kar rha"
+      - "kaam nhi kar rha"
+      - "kaam nahi karta"
+      - "kaam nhi karta"
+      - "kam nahi kar raha"
+      - "kam nhi kar raha"
+      - "nahi ho raha"
+      - "nhi ho raha"
+      - "nahi ho rha"
+      - "nhi ho rha"
+      - "nahi ho rahi"
+      - "nhi ho rahi"
+      - "nahi ho pa raha"
+      - "nhi ho pa raha"
+      - "nahi ho pa rha"
+      - "nhi ho pa rha"
+
+  - id: not_opening
+    canonical: "not opening"
+    variants:
+      - "open nahi ho raha"
+      - "open nhi ho raha"
+      - "open nahi ho rha"
+      - "open nhi ho rha"
+      - "open nahi hota"
+      - "open nhi hota"
+      - "khul nahi raha"
+      - "khul nhi raha"
+      - "khul nahi rha"
+      - "khul nhi rha"
+      - "nahi khul raha"
+      - "nhi khul raha"
+      - "nahi khul rha"
+      - "nhi khul rha"
+
+  - id: not_loading
+    canonical: "not loading"
+    variants:
+      - "load nahi ho raha"
+      - "load nhi ho raha"
+      - "load nahi ho rha"
+      - "load nhi ho rha"
+      - "load nahi hota"
+      - "load nhi hota"
+      - "loading nahi ho raha"
+      - "loading nhi ho raha"
+
+  - id: not_done
+    canonical: "not done"
+    variants: ["nahi hua", "nahi hui", "nahi hue", "nhi hua", "nhi hui", "nhi hue"]
+
+  # ---- states -------------------------------------------------------------
+  - id: stuck_atak_gaya
+    canonical: "stuck"
+    variants: ["atak gaya", "atak gayi", "atak gya", "atka hua", "atki hui", "atka hai", "atki hai"]
+
+  - id: blocked_ho_gaya
+    canonical: "blocked"
+    variants:
+      - "block ho gaya"
+      - "block ho gayi"
+      - "block ho gya"
+      - "block ho gaye"
+      - "block hogaya"
+      - "block hogya"
+      - "block hua"
+
+  - id: stopped_band_ho_gaya
+    canonical: "stopped"
+    variants:
+      ["band ho gaya", "band ho gayi", "band ho gya", "band ho gaye", "band hogaya", "band hogya", "bandh ho gaya", "bandh ho gayi"]
+
+  - id: broken_toot_gaya
+    canonical: "broken"
+    variants: ["toot gaya", "toot gayi", "toot gaye", "toot gya", "toot gye", "toot gai", "tut gaya", "tut gayi"]
+
+  - id: lost_kho_gaya
+    canonical: "lost"
+    variants: ["kho gaya", "kho gayi", "kho gaye", "kho gya", "gum ho gaya", "gum ho gayi", "gum hogaya"]
+
+  # ---- people / security --------------------------------------------------
+  - id: someone_else
+    canonical: "someone else"
+    variants:
+      ["kisi aur ne", "koi aur ne", "kisi dusre ne", "kisi doosre ne", "kisi aur", "koi aur", "kisi dusre", "kisi doosre"]
+
+  - id: without_asking
+    canonical: "without asking"
+    variants: ["bina pooche", "bina puche", "bina poochhe", "bina puchhe", "bina bataye", "bina bataiye"]
+
+  # ---- spacing variants of single words -----------------------------------
+  - id: properly_se
+    canonical: "properly"
+    variants: ["thik se", "theek se", "thek se", "sahi se"]
+
+  - id: login_spaced
+    canonical: "login"
+    variants: ["log in", "sign in"]
+
+  - id: checkout_spaced
+    canonical: "checkout"
+    variants: ["check out"]
+
+  - id: timeout_spaced
+    canonical: "timeout"
+    variants: ["time out"]
+
+  - id: password_spaced
+    canonical: "password"
+    variants: ["pass word"]
+
+tokens:
+  # ---- negation and English contractions ----------------------------------
+  - id: not_nahi
+    canonical: "not"
+    variants: ["nahi", "nhi", "nahin", "nhin", "nahee", "nehi"]
+
+  - id: did_not
+    canonical: "did not"
+    variants: ["didn't", "didnt"]
+
+  - id: does_not
+    canonical: "does not"
+    variants: ["doesn't", "doesnt"]
+
+  - id: do_not
+    canonical: "do not"
+    variants: ["don't", "dont"]
+
+  # canonical is "can not" (not "cannot") so that "can nahi" -> "can not" is already stable
+  - id: cannot_contraction
+    canonical: "can not"
+    variants: ["can't", "cant", "cannot"]
+
+  - id: will_not
+    canonical: "will not"
+    variants: ["won't", "wont"]
+
+  - id: is_not
+    canonical: "is not"
+    variants: ["isn't", "isnt"]
+
+  - id: was_not
+    canonical: "was not"
+    variants: ["wasn't", "wasnt"]
+
+  - id: has_not
+    canonical: "has not"
+    variants: ["hasn't", "hasnt"]
+
+  - id: have_not
+    canonical: "have not"
+    variants: ["haven't", "havent"]
+
+  - id: could_not
+    canonical: "could not"
+    variants: ["couldn't", "couldnt"]
+
+  - id: are_not
+    canonical: "are not"
+    variants: ["aren't", "arent"]
+
+  # ---- money and payments -------------------------------------------------
+  - id: money_paisa
+    canonical: "money"
+    variants: ["paisa", "paise", "paisay", "pese", "paiso", "paiza"]
+
+  - id: rupees
+    canonical: "rupees"
+    variants: ["rs", "inr", "rupee", "rupaye", "rupay", "rupye", "rupiya", "rupiye"]
+
+  - id: amount_rakam
+    canonical: "amount"
+    variants: ["rakam", "raqam"]
+
+  - id: payment_typos
+    canonical: "payment"
+    variants: ["paymnt", "pymnt", "pymt", "paymant", "payement", "paiment", "paymet"]
+
+  - id: transaction_typos
+    canonical: "transaction"
+    variants: ["txn", "trxn", "trnx", "tranx", "transction", "transacton", "trnsaction", "transcation"]
+
+  - id: failed_variants
+    canonical: "failed"
+    variants: ["fail", "fails", "faild", "failure"]
+
+  - id: deducted_variants
+    canonical: "deducted"
+    variants: ["kat", "kata", "kate", "kati", "katgaya", "katgya", "deduct", "debited"]
+
+  - id: withdrawn_variants
+    canonical: "withdrawn"
+    variants: ["nikale", "nikal", "nikaal", "nikala", "nikli", "nikla", "nikle"]
+
+  - id: charge_typos
+    canonical: "charge"
+    variants: ["charg", "chrg", "charje"]
+
+  - id: charged_typos
+    canonical: "charged"
+    variants: ["chargd", "charjed"]
+
+  - id: double_typos
+    canonical: "double"
+    variants: ["dabal", "dubble", "doubel", "doubl"]
+
+  - id: twice_variants
+    canonical: "twice"
+    variants: ["dobar", "dubar"]
+
+  - id: again_variants
+    canonical: "again"
+    variants: ["dobara", "dubara", "dobaara", "dubaara", "firse", "phirse"]
+
+  - id: refund_typos
+    canonical: "refund"
+    variants: ["rifund", "refnd", "rifand", "refud", "refond"]
+
+  - id: back_wapas
+    canonical: "back"
+    variants: ["wapas", "vapas", "wapis", "vapis", "wapass"]
+
+  - id: received_aaya
+    canonical: "received"
+    variants: ["aaya", "aya", "aayi", "ayi", "aaye", "aye", "mila", "mili", "mile"]
+
+  - id: will_receive_milega
+    canonical: "will receive"
+    variants: ["milega", "milegi", "milenge"]
+
+  - id: stuck_variants
+    canonical: "stuck"
+    variants: ["atka", "atak", "atki", "atke"]
+
+  # ---- question words -----------------------------------------------------
+  - id: when_kab
+    canonical: "when"
+    variants: ["kab", "kb"]
+
+  - id: why_kyun
+    canonical: "why"
+    variants: ["kyun", "kyu", "kyon", "kyo"]
+
+  - id: what_kya
+    canonical: "what"
+    variants: ["kya", "kyaa", "wat", "wht"]
+
+  - id: how_kaise
+    canonical: "how"
+    variants: ["kaise", "kese", "kaisa", "kaisey"]
+
+  - id: where_kahan
+    canonical: "where"
+    variants: ["kahan", "kahaan", "kaha"]
+
+  # ---- orders and delivery ------------------------------------------------
+  - id: delay_deri
+    canonical: "delay"
+    variants: ["deri", "der", "dair", "deree"]
+
+  - id: days_din
+    canonical: "days"
+    variants: ["din", "dino", "dinon"]
+
+  - id: delivery_typos
+    canonical: "delivery"
+    variants: ["delevery", "delivry", "delievery", "deliveri", "delivary"]
+
+  - id: delivered_typos
+    canonical: "delivered"
+    variants: ["deliverd", "delivred", "delievered"]
+
+  - id: order_typos
+    canonical: "order"
+    variants: ["oder", "ordr", "ordar", "ordre"]
+
+  - id: item_saman
+    canonical: "item"
+    variants: ["samaan", "saman"]
+
+  - id: product_typos
+    canonical: "product"
+    variants: ["prodct", "produkt", "prduct", "proudct"]
+
+  - id: wrong_galat
+    canonical: "wrong"
+    variants: ["galat", "galt", "ghalat", "glt", "ghalt"]
+
+  - id: faulty_kharab
+    canonical: "faulty"
+    variants: ["kharab", "kharaab", "kharb"]
+
+  - id: damaged_typos
+    canonical: "damaged"
+    variants: ["damge", "damagd", "dmgd", "damged"]
+
+  - id: broken_toota
+    canonical: "broken"
+    variants: ["toota", "tuta", "tooti", "tuti", "toote", "tute"]
+
+  - id: torn_phata
+    canonical: "torn"
+    variants: ["fata", "phata", "fati", "phati"]
+
+  - id: missing_gayab
+    canonical: "missing"
+    variants: ["gayab", "gaayab", "ghayab"]
+
+  - id: different_dusra
+    canonical: "different"
+    variants: ["dusra", "doosra", "dusri", "doosri", "dusre", "doosre", "alag"]
+
+  - id: cancel_typos
+    canonical: "cancel"
+    variants: ["cancle", "cancal", "cancell", "kancel", "cancl", "cancil"]
+
+  - id: cancelled_typos
+    canonical: "cancelled"
+    variants: ["canceled", "cancelld", "cancled"]
+
+  - id: change_badal
+    canonical: "change"
+    variants: ["badal", "badalna", "badalni", "badlo", "badlna", "badlni", "badalo"]
+
+  # ---- app / technical ----------------------------------------------------
+  - id: stopped_band
+    canonical: "stopped"
+    variants: ["band", "bandh", "bnd"]
+
+  - id: error_typos
+    canonical: "error"
+    variants: ["erorr", "eror", "errer", "eroor"]
+
+  - id: loading_typos
+    canonical: "loading"
+    variants: ["loding", "lodin", "loadin"]
+
+  - id: checkout_typos
+    canonical: "checkout"
+    variants: ["chekout", "checkot", "checkut", "chekcout"]
+
+  - id: coupon_typos
+    canonical: "coupon"
+    variants: ["cupon", "coupen", "kupon", "copon"]
+
+  # ---- account and security -----------------------------------------------
+  - id: login_typos
+    canonical: "login"
+    variants: ["signin", "loggin", "loging", "logn", "logim"]
+
+  - id: password_typos
+    canonical: "password"
+    variants: ["pasword", "passwrd", "pswd", "pwd", "passwd", "paswrd"]
+
+  - id: account_typos
+    canonical: "account"
+    variants: ["acount", "acc", "accnt", "acct", "akaunt", "akount", "accaunt"]
+
+  - id: hacked_variants
+    canonical: "hacked"
+    variants: ["hack", "hakced", "hackd", "hacd"]
+
+  - id: blocked_variants
+    canonical: "blocked"
+    variants: ["block", "blok", "blck", "blockd"]
+
+  - id: unauthorized_spellings
+    canonical: "unauthorized"
+    variants: ["unauthorised", "unathorized", "unauthorize", "unauthorise", "unauthorizd", "unathorised"]
+
+  - id: permission_variants
+    canonical: "permission"
+    variants: ["permision", "parmission", "permisson", "ijazat"]
+
+  - id: without_bina
+    canonical: "without"
+    variants: ["bina", "bena"]
+
+  - id: fraud_variants
+    canonical: "fraud"
+    variants: ["frod", "fraude", "fraudlent", "fraudulent", "scam", "scammed", "scammer", "thagi", "thag", "thagne", "dhokha", "dhoka", "dhokhe"]
+
+  - id: someone_koi
+    canonical: "someone"
+    variants: ["koi", "kisi"]
+
+  # ---- people and politeness ----------------------------------------------
+  - id: my_mera
+    canonical: "my"
+    variants: ["mera", "meri", "mere", "mra", "mri"]
+
+  - id: me_mujhe
+    canonical: "me"
+    variants: ["mujhe", "mujko", "mjhe", "mujhko"]
+
+  - id: need_chahiye
+    canonical: "need"
+    variants: ["chahiye", "chahie", "chaiye", "chahye", "chaahiye"]
+
+  - id: help_madad
+    canonical: "help"
+    variants: ["madad", "madat"]
+
+  - id: please_variants
+    canonical: "please"
+    variants: ["plz", "pls", "plss", "plzz", "pleas", "pliz", "plis", "kripya", "krpya"]
+
+  - id: immediately_turant
+    canonical: "immediately"
+    variants: ["turant", "turat", "fauran", "foran", "asap"]
+
+  - id: quickly_jaldi
+    canonical: "quickly"
+    variants: ["jaldi", "jldi", "jaldii"]
+
+  - id: urgent_typos
+    canonical: "urgent"
+    variants: ["urgnt", "urjent", "urgnet", "urgant"]
+
+  - id: very_bahut
+    canonical: "very"
+    variants: ["bahut", "bohot", "bahot", "bhot", "bhut", "bohut"]
+
+  - id: more_zyada
+    canonical: "more"
+    variants: ["zyada", "jyada", "jyda", "zyda", "zada"]
+
+  - id: complaint_variants
+    canonical: "complaint"
+    variants: ["complain", "complint", "shikayat", "shikayet", "shikayt", "shikaayat"]
+
+  - id: reply_jawab
+    canonical: "reply"
+    variants: ["rply", "jawab", "jawaab", "jawap", "jawb"]
