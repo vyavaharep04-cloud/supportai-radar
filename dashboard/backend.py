@@ -22,14 +22,19 @@ import pandas as pd
 
 from dashboard.contracts import (
     CAPABILITY_SPECS,
+    ClassificationView,
     EntityView,
     EvaluationReport,
     IncidentView,
     ReplayData,
     TicketAnalysis,
+    UrgencyFactor,
+    UrgencyView,
 )
+from supportai.classifier import TicketClassifier
 from supportai.normalizer import get_default_normalizer
 from supportai.taxonomy import Taxonomy, load_taxonomy
+from supportai.urgency import score_urgency
 
 
 @dataclass(frozen=True)
@@ -77,6 +82,64 @@ def get_taxonomy() -> Taxonomy:
     """The real taxonomy from ``config/taxonomy.yaml`` (raises ConfigError if invalid)."""
     return load_taxonomy()
 
+@lru_cache(maxsize=1)
+def get_classifier() -> TicketClassifier:
+    """Load the trained classifier once and reuse it across dashboard requests."""
+    return TicketClassifier.load()
+def _review_reason(
+    raw_text: str,
+    issue_id: str,
+    confidence: float,
+) -> str | None:
+    """Explain why a ticket must be reviewed by a human."""
+    classifier = get_classifier()
+
+    if confidence < classifier.confidence_threshold:
+        return (
+            f"Model confidence {confidence:.2f} is below the "
+            f"{classifier.confidence_threshold:.2f} review threshold."
+        )
+
+    if issue_id == "other":
+        return "The issue was classified as 'other' and requires human review."
+
+    # Conservative checks for clear security-related language.
+    text = get_default_normalizer().normalize(raw_text)
+
+    security_patterns = (
+        "unauthorized transaction",
+        "unauthorised transaction",
+        "unknown transaction",
+        "fraud",
+        "someone hacked",
+        "account hacked",
+        "account compromised",
+        "without my permission",
+        "without my authorization",
+        "without my authorisation",
+        "i did not make this transaction",
+        "i didn't make this transaction",
+        "not my transaction",
+    )
+
+    has_security_signal = any(
+        phrase in text for phrase in security_patterns
+    )
+
+    security_issue_ids = {
+        issue.id
+        for issue in get_taxonomy().issue_types
+        if "security" in issue.department
+    }
+
+    if has_security_signal and issue_id not in security_issue_ids:
+        return (
+            "Security-related language conflicts with the predicted issue; "
+            "manual verification is required."
+        )
+
+    return None
+
 
 def _format_amount(amount: float) -> str:
     return f"₹{amount:,.2f}".removesuffix(".00")
@@ -103,15 +166,105 @@ def extract_entity_views(text: str) -> tuple[EntityView, ...] | None:
 
 
 def analyze_ticket(text: str) -> TicketAnalysis:
-    """Analyse one message with whatever backend stages exist.
+    """Analyse a message using the connected backend stages."""
+    normalization = get_default_normalizer().explain(text)
+    entities = extract_entity_views(text)
 
-    Connected today: normalization and entity extraction.  Every other stage
-    stays ``None`` so the page shows it as "not connected".
-    """
+    # Keep classification honest if the trained model is unavailable.
+    try:
+        classifier = get_classifier()
+        result = classifier.predict(text)
+
+        runner_up = tuple(
+            sorted(
+                (
+                    (issue_id, probability)
+                    for issue_id, probability in result.probabilities.items()
+                    if issue_id != result.issue_type
+                ),
+                key=lambda item: item[1],
+                reverse=True,
+            )[:3]
+        )
+
+        review_reason = _review_reason(
+            text,
+            result.issue_type,
+            result.confidence,
+        )
+
+        from dashboard.contracts import ClassificationView
+
+        classification = ClassificationView(
+            issue_id=result.issue_type,
+            confidence=result.confidence,
+            runner_up=runner_up,
+            needs_human_review=review_reason is not None,
+            review_reason=review_reason,
+        )
+
+        # A review-required ticket is routed to the Human Review department.
+        # Its predicted issue remains visible in the classification result.
+        department_id = (
+            "human_review"
+            if review_reason is not None
+            else get_taxonomy().department_for(result.issue_type).id
+        )
+# Stage 7: Calculate urgency independently of review routing.
+        urgency_result = score_urgency(
+            raw_text=text,
+            issue_type=result.issue_type,
+        )
+
+        urgency = UrgencyView(
+            score=urgency_result.score,
+            priority=urgency_result.priority,
+            factors=(
+                UrgencyFactor(
+                    name="Base issue score",
+                    points=urgency_result.base_score,
+                    detail=f"Base score for {result.issue_type}",
+                ),
+                UrgencyFactor(
+                    name="Risk signals",
+                    points=urgency_result.risk_bonus,
+                    detail="Risk-related phrases detected in the message",
+                ),
+                UrgencyFactor(
+                    name="Amount",
+                    points=urgency_result.amount_bonus,
+                    detail="Bonus based on the monetary amount",
+                ),
+                UrgencyFactor(
+                    name="Frustration",
+                    points=urgency_result.frustration_bonus,
+                    detail="Customer frustration signals",
+                ),
+                UrgencyFactor(
+                    name="Repeat contact",
+                    points=urgency_result.repeat_contact_bonus,
+                    detail="Bonus for repeat contact",
+                ),
+            ),
+            floors_applied=(
+                (urgency_result.priority_floor_applied,)
+                if urgency_result.priority_floor_applied
+                else ()
+            ),
+        )
+
+    except (FileNotFoundError, RuntimeError):
+        classification = None
+        department_id = None
+        urgency = None
+
     return TicketAnalysis(
         raw_text=text,
-        normalization=get_default_normalizer().explain(text),
-        entities=extract_entity_views(text),  # reads the RAW text, as designed
+        normalization=normalization,
+        entities=entities,
+        classification=classification,
+        department_id=department_id,
+        urgency=urgency if classification is not None else None,
     )
 
 

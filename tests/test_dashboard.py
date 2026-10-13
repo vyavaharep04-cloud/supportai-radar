@@ -52,7 +52,14 @@ def test_capabilities_report_only_what_really_exists():
     assert caps["normalization"].connected and caps["taxonomy"].connected
     assert caps["entities"].connected == (ROOT / "supportai" / "entities.py").exists()
     # Backend modules that do not exist yet must be reported as not connected.
-    for key in ("ingestion", "classifier", "urgency", "playbooks", "incidents", "replay", "evaluation"):
+        # Existing modules without adapters must remain disconnected.
+    for key in (
+        "ingestion",
+        "playbooks",
+        "incidents",
+        "replay",
+        "evaluation",
+    ):
         spec_module = caps[key].module
         module_file = ROOT / (spec_module.replace(".", "/") + ".py")
         if not module_file.exists():
@@ -61,10 +68,24 @@ def test_capabilities_report_only_what_really_exists():
 
 def test_a_module_that_exists_without_an_adapter_is_not_reported_as_connected(monkeypatch):
     monkeypatch.setattr(backend, "_module_exists", lambda name: True)
+
     caps = {c.key: c for c in backend.capabilities()}
-    assert not caps["classifier"].connected
-    assert "adapter is not written" in caps["classifier"].detail
+
+    # Capabilities with adapters remain connected.
     assert caps["normalization"].connected
+    assert caps["taxonomy"].connected
+    assert caps["classifier"].connected
+
+    # Existing modules without adapters must remain disconnected.
+    for key in (
+        "ingestion",
+        "playbooks",
+        "incidents",
+        "replay",
+        "evaluation",
+    ):
+        assert not caps[key].connected
+        assert "adapter is not written" in caps[key].detail
 
 
 def test_capability_keys_are_unique_and_cover_the_frozen_workflow():
@@ -77,17 +98,36 @@ def test_capability_keys_are_unique_and_cover_the_frozen_workflow():
 def test_analyze_ticket_uses_real_backend_stages_and_invents_nothing():
     from supportai.entities import extract_entities
 
-    text = "Paisa kat gaya but order nahi aaya!!! ₹1,299.50 deducted, order ORD482913"
+    text = (
+        "Paisa kat gaya but order nahi aaya!!! "
+        "₹1,299.50 deducted, order ORD482913"
+    )
+
     analysis = backend.analyze_ticket(text)
+
     assert analysis.raw_text == text
     assert analysis.normalization == get_default_normalizer().explain(text)
-    # entities are the real extractor's output (on the RAW text), translated for display
-    assert analysis.entities == backend.entity_views(extract_entities(text))
-    assert ("amount", "₹1,299.50") in {(e.kind, e.value) for e in analysis.entities}
-    # stages whose backend does not exist stay empty
-    assert analysis.classification is None
-    assert analysis.department_id is None
-    assert analysis.urgency is None
+
+    # Entities must come from the real extractor.
+    assert analysis.entities == backend.entity_views(
+        extract_entities(text)
+    )
+
+    # Classification must come from the trained model.
+    assert analysis.classification is not None
+    assert analysis.classification.issue_id in load_taxonomy().issue_ids()
+    assert 0.0 <= analysis.classification.confidence <= 1.0
+
+    # Department must be provided by the backend.
+    assert analysis.department_id is not None
+
+    if analysis.classification.needs_human_review:
+        assert analysis.department_id == "human_review"
+
+    # These stages have not been integrated yet.
+    # Urgency is integrated; playbooks are not yet integrated.
+    assert analysis.urgency is not None
+    assert analysis.urgency.priority in {"P1", "P2", "P3", "P4"}
     assert analysis.playbook is None
 
 
@@ -327,18 +367,36 @@ def test_incident_and_evaluation_pages_carry_their_standing_caveats():
 # --------------------------------------------------------------------------
 
 
-def test_analysis_runs_live_normalization_and_marks_other_stages_not_connected():
-    at = AppTest.from_string(SCRIPT.format(page="analysis", preview=False)).run()
-    at.selectbox(key="analysis_example").select("Paisa kat gaya but order nahi aaya!!!").run()
-    assert at.text_area(key="analysis_text").value == "Paisa kat gaya but order nahi aaya!!!"
+def test_analysis_runs_live_normalization_and_marks_unconnected_stages():
+    at = AppTest.from_string(
+        SCRIPT.format(page="analysis", preview=False)
+    ).run()
+
+    at.selectbox(key="analysis_example").select(
+        "Paisa kat gaya but order nahi aaya!!!"
+    ).run()
+
+    assert (
+        at.text_area(key="analysis_text").value
+        == "Paisa kat gaya but order nahi aaya!!!"
+    )
+
     at.button[0].click().run()
     assert not at.exception
+
     md = markdown_of(at)
-    expected = get_default_normalizer().normalize("Paisa kat gaya but order nahi aaya!!!")
-    assert expected in md  # real output, not a canned string
-    # classifier, routing, urgency and playbooks are not connected; normalization and entities are live
-    assert md.count("NOT CONNECTED") == 4
-    assert md.count(">LIVE<") >= 2
+
+    expected = get_default_normalizer().normalize(
+        "Paisa kat gaya but order nahi aaya!!!"
+    )
+    assert expected in md
+
+    # Classification is now connected.
+    assert "NOT CONNECTED" in md  # Some stages remain unconnected.
+
+    # Urgency and playbooks are still unconnected.
+    assert "Urgency" in md
+    assert "Playbook" in md
 
 
 def test_analysis_shows_real_extracted_entities_as_chips():

@@ -206,16 +206,16 @@ CAPABILITY_SPECS: tuple[CapabilitySpec, ...] = (
         "extract_entities(raw_text) -> dict[amounts, order_ids, transaction_ids, payment_methods, products]",
     ),
     CapabilitySpec(
-        "classifier", "Issue classification + review routing", "DECIDE", "supportai.classifier", False,
-        "predict(raw_text) -> (issue_id, confidence, needs_human_review)",
+    "classifier", "Issue classification + review routing", "DECIDE", "supportai.classifier", True,
+    "TicketClassifier.load().predict(raw_text) -> ClassificationResult",
     ),
     CapabilitySpec(
         "taxonomy", "Taxonomy & department mapping", "DECIDE", "supportai.taxonomy", True,
         "load_taxonomy() -> Taxonomy",
     ),
     CapabilitySpec(
-        "urgency", "Urgency & priority scoring", "DECIDE", "supportai.urgency", False,
-        "score_urgency(raw_text, issue_id, entities) -> UrgencyResult",
+    "urgency", "Urgency & priority scoring", "DECIDE", "supportai.urgency", True,
+    "score_urgency(raw_text, issue_type, repeat_contact=False) -> UrgencyResult",
     ),
     CapabilitySpec(
         "playbooks", "Playbook replies & checklists", "ASSIST", "supportai.playbooks", False,
