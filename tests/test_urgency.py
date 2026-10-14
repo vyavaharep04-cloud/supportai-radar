@@ -41,6 +41,21 @@ def test_very_high_amount_adds_fifteen_points():
     assert result.amount_bonus == 15
 
 
+@pytest.mark.parametrize(
+    "text",
+    [
+        "Payment failed for order ORD123456",
+        "Transaction TXN778899 is pending",
+        "Call me on 9876543210",
+        "Reference UTR: 123456789012",
+        "Order ORD482913; amount charged was ₹1,299.50",
+    ],
+)
+def test_identifiers_and_phone_numbers_are_not_amounts(text):
+    result = score_urgency(text, "payment_failed")
+    assert result.amount_bonus == (5 if "₹1,299.50" in text else 0)
+
+
 def test_risk_bonus_is_capped_at_thirty():
     result = score_urgency(
         "Urgent, fraud transaction, money deducted",
