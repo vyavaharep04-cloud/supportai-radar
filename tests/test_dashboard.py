@@ -159,6 +159,65 @@ def test_unconnected_loaders_return_none(loader):
     assert getattr(backend, loader)() is None
 
 
+
+def test_configured_ticket_loader_returns_none_without_path(monkeypatch):
+    monkeypatch.delenv("SUPPORTAI_TICKETS_CSV", raising=False)
+    backend._read_inference_csv.cache_clear()
+    assert backend.load_tickets() is None
+
+
+def test_configured_ticket_loader_runs_predictions_not_ground_truth(tmp_path, monkeypatch):
+    path = tmp_path / "incoming.csv"
+    pd.DataFrame({
+        "ticket_id": ["T-100", "T-101"],
+        "customer_id": ["C-10", "C-11"],
+        "timestamp": ["2026-10-12 10:00:00", "2026-10-12 10:05:00"],
+        "raw_text": ["UPI payment failed", "My order delivery is late"],
+        "issue_type": ["order_delay", "payment_failed"],
+        "department": ["wrong source label", "wrong source label"],
+    }).to_csv(path, index=False)
+    monkeypatch.setenv("SUPPORTAI_TICKETS_CSV", str(path))
+    backend._read_inference_csv.cache_clear()
+
+    result = backend.load_tickets()
+
+    assert result is not None
+    assert set(contracts.TICKET_COLUMNS) <= set(result.columns)
+    assert len(result) == 2
+    assert result["issue_id"].tolist() != ["order_delay", "payment_failed"]
+    assert result["ground_truth_issue_id"].tolist() == ["order_delay", "payment_failed"]
+    assert result["priority"].isin(contracts.PRIORITIES).all()
+    assert pd.api.types.is_datetime64_any_dtype(result["created_at"])
+
+
+def test_configured_ticket_loader_rejects_missing_input_columns(tmp_path, monkeypatch):
+    path = tmp_path / "bad.csv"
+    pd.DataFrame({"ticket_id": ["T-1"], "raw_text": ["payment failed"]}).to_csv(path, index=False)
+    monkeypatch.setenv("SUPPORTAI_TICKETS_CSV", str(path))
+    backend._read_inference_csv.cache_clear()
+
+    with pytest.raises(ValueError, match="missing required input columns"):
+        backend.load_tickets()
+
+
+def test_configured_ticket_loader_keeps_rows_with_invalid_timestamps(tmp_path, monkeypatch):
+    path = tmp_path / "incoming.csv"
+    pd.DataFrame({
+        "ticket_id": ["T-200"],
+        "customer_id": ["C-20"],
+        "timestamp": ["not-a-date"],
+        "raw_text": ["UPI payment failed"],
+    }).to_csv(path, index=False)
+    monkeypatch.setenv("SUPPORTAI_TICKETS_CSV", str(path))
+    backend._read_inference_csv.cache_clear()
+
+    result = backend.load_tickets()
+
+    assert result is not None and len(result) == 1
+    assert pd.isna(result.loc[0, "created_at"])
+    assert "timestamp_warning" in result.attrs
+
+
 def test_taxonomy_comes_from_the_real_config():
     assert backend.get_taxonomy().issue_ids() == load_taxonomy().issue_ids()
 
