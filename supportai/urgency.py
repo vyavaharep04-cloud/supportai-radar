@@ -5,6 +5,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 
+from supportai.entities import extract_entities
 from supportai.taxonomy import load_taxonomy
 
 
@@ -94,11 +95,6 @@ NEGATION_PATTERN = re.compile(
     re.IGNORECASE,
 )
 
-AMOUNT_PATTERN = re.compile(
-    r"(?:₹|rs\.?\s*|inr\s*)?(\d[\d,]*(?:\.\d{1,2})?)",
-    re.IGNORECASE,
-)
-
 
 @dataclass(frozen=True)
 class UrgencyResult:
@@ -116,30 +112,8 @@ class UrgencyResult:
 
 
 def _extract_amounts(raw_text: str) -> list[float]:
-    """Extract likely monetary amounts from ticket text."""
-
-    amounts: list[float] = []
-
-    for match in AMOUNT_PATTERN.finditer(raw_text):
-        token = match.group(1).replace(",", "")
-
-        try:
-            amount = float(token)
-        except ValueError:
-            continue
-
-        # Avoid interpreting ordinary small numbers as currency.
-        prefix = raw_text[max(0, match.start() - 5):match.start()].lower()
-        has_currency_marker = (
-            "₹" in prefix
-            or "rs" in prefix
-            or "inr" in prefix
-        )
-
-        if has_currency_marker or amount >= 1000:
-            amounts.append(amount)
-
-    return amounts
+    """Return only amounts recognized by the shared entity extractor."""
+    return extract_entities(raw_text)["amounts"]
 
 
 def _is_negated(raw_text: str, match_start: int) -> bool:
