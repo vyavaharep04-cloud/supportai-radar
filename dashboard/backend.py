@@ -242,19 +242,10 @@ def _read_inference_csv(path_text: str, modified_ns: int, size: int) -> pd.DataF
     return frame
 
 
-def load_tickets() -> pd.DataFrame | None:
-    """Analyze rows from an explicitly configured input CSV.
-
-    Set SUPPORTAI_TICKETS_CSV to a CSV with ticket_id, customer_id, timestamp,
-    and raw_text columns. Labels are optional and are never treated as predictions.
-    """
-    path = _configured_ticket_path()
-    if path is None:
-        return None
-    if not path.is_file():
-        raise FileNotFoundError(f"Configured SUPPORTAI_TICKETS_CSV does not exist: {path}")
-
-    source = _read_inference_csv(str(path), path.stat().st_mtime_ns, path.stat().st_size)
+@lru_cache(maxsize=8)
+def _analyze_input_csv(path_text: str, modified_ns: int, size: int) -> pd.DataFrame:
+    """Analyze a CSV once per file version so Streamlit reruns stay responsive."""
+    source = _read_inference_csv(path_text, modified_ns, size)
     decisions = analyze_dataframe(source, text_column="raw_text")
     taxonomy = get_taxonomy()
 
@@ -290,6 +281,21 @@ def load_tickets() -> pd.DataFrame | None:
             "they are retained but cannot appear in time-based charts."
         )
     return frame
+
+
+def load_tickets() -> pd.DataFrame | None:
+    """Analyze rows from an explicitly configured input CSV.
+
+    Set SUPPORTAI_TICKETS_CSV to a CSV with ticket_id, customer_id, timestamp,
+    and raw_text columns. Labels are optional and are never treated as predictions.
+    """
+    path = _configured_ticket_path()
+    if path is None:
+        return None
+    if not path.is_file():
+        raise FileNotFoundError(f"Configured SUPPORTAI_TICKETS_CSV does not exist: {path}")
+
+    return _analyze_input_csv(str(path), path.stat().st_mtime_ns, path.stat().st_size).copy()
 
 
 def load_incidents() -> list[IncidentView] | None:
