@@ -31,7 +31,7 @@ from dashboard.contracts import (
     UrgencyFactor,
     UrgencyView,
 )
-from supportai.pipeline import analyze_text, get_pipeline_classifier
+from supportai.pipeline import analyze_dataframe, analyze_text, get_pipeline_classifier
 from supportai.normalizer import get_default_normalizer
 from supportai.taxonomy import Taxonomy, load_taxonomy
 
