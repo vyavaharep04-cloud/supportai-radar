@@ -9,7 +9,7 @@ Rules
 * Connecting a new module means editing ONE function below so that it returns
   the shapes defined in ``dashboard.contracts``.
 
-Currently connected: the Hinglish normalizer and the taxonomy.
+Currently connected: configured CSV ticket input, normalization, entity extraction, classification, taxonomy, review routing, and urgency.
 """
 
 from __future__ import annotations
