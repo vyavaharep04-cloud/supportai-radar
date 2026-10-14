@@ -204,7 +204,8 @@ def _read_inference_csv(path_text: str, modified_ns: int, size: int) -> pd.DataF
 
     path = Path(path_text)
     try:
-        frame = pd.read_csv(path)
+        # Read identifiers as strings so values such as 000123 keep their zeros.
+        frame = pd.read_csv(path, dtype="string")
     except pd.errors.EmptyDataError as exc:
         raise ValueError(f"Configured ticket CSV is empty: {path}") from exc
     except pd.errors.ParserError as exc:
