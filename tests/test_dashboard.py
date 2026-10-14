@@ -167,8 +167,8 @@ def test_configured_ticket_loader_runs_predictions_not_ground_truth(tmp_path, mo
 
     path = tmp_path / "incoming.csv"
     pd.DataFrame({
-        "ticket_id": ["T-100", "T-101"],
-        "customer_id": ["C-10", "C-11"],
+        "ticket_id": ["00100", "00101"],
+        "customer_id": ["00010", "00011"],
         "timestamp": ["2026-10-12 10:00:00", "2026-10-12 10:05:00"],
         "raw_text": ["UPI payment failed", "My order delivery is late"],
         "issue_type": ["order_delay", "payment_failed"],
@@ -207,6 +207,8 @@ def test_configured_ticket_loader_runs_predictions_not_ground_truth(tmp_path, mo
     assert len(result) == 2
     assert result["issue_id"].tolist() == ["payment_failed", "order_delay"]
     assert result["ground_truth_issue_id"].tolist() == ["order_delay", "payment_failed"]
+    assert result["ticket_id"].tolist() == ["00100", "00101"]
+    assert result["customer_id"].tolist() == ["00010", "00011"]
     assert result["priority"].isin(contracts.PRIORITIES).all()
     assert pd.api.types.is_datetime64_any_dtype(result["created_at"])
 
