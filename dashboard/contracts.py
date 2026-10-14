@@ -194,8 +194,8 @@ class CapabilitySpec:
 
 CAPABILITY_SPECS: tuple[CapabilitySpec, ...] = (
     CapabilitySpec(
-        "ingestion", "CSV ingestion", "UNDERSTAND", "supportai.ingestion", False,
-        "load_tickets(path) -> pandas.DataFrame",
+        "ingestion", "CSV ticket input", "UNDERSTAND", "dashboard.backend", True,
+        "Set SUPPORTAI_TICKETS_CSV to a CSV with ticket_id, customer_id, timestamp, raw_text; predictions are generated locally.",
     ),
     CapabilitySpec(
         "normalization", "Hinglish normalization", "UNDERSTAND", "supportai.normalizer", True,
