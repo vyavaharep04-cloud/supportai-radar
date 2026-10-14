@@ -179,24 +179,101 @@ def normalizer_info() -> dict[str, str | int]:
     return {"version": normalizer.lexicon_version, "fingerprint": normalizer.lexicon_fingerprint}
 
 
-# -- Not connected yet.  Each returns None until its backend module exists. ----
+# -- CSV-backed ticket analysis. Other loaders stay disconnected until their
+# real detection/replay/evaluation algorithms are implemented. -----------------
+
+
+def _configured_ticket_path() -> "Path | None":
+    """Resolve an optional inference CSV path from SUPPORTAI_TICKETS_CSV."""
+    import os
+    from pathlib import Path
+
+    configured = os.getenv("SUPPORTAI_TICKETS_CSV", "").strip()
+    if not configured:
+        return None
+    path = Path(configured).expanduser()
+    if not path.is_absolute():
+        path = Path(__file__).resolve().parents[1] / path
+    return path
+
+
+@lru_cache(maxsize=1)
+def _load_input_csv(path_text: str, modified_ns: int, size: int) -> pd.DataFrame:
+    """Load a configured CSV and cache it until its file metadata changes."""
+    from supportai.ingestion import load_tickets
+
+    return load_tickets(path_text)
 
 
 def load_tickets() -> pd.DataFrame | None:
-    """Ticket table with ``contracts.TICKET_COLUMNS`` (needs ingestion + classifier + urgency)."""
-    return None
+    """Return model predictions for the configured input CSV, or None if unset.
+
+    Expected source columns are those required by supportai.ingestion. Ground-truth
+    labels are retained under separate columns and are never used as predictions.
+    """
+    from pathlib import Path
+
+    path = _configured_ticket_path()
+    if path is None:
+        return None
+    if not path.is_file():
+        raise FileNotFoundError(f"Configured SUPPORTAI_TICKETS_CSV does not exist: {path}")
+
+    source = _load_input_csv(str(path), path.stat().st_mtime_ns, path.stat().st_size)
+    decisions = analyze_dataframe(source, text_column="raw_text")
+    normalizer = get_default_normalizer()
+    taxonomy = get_taxonomy()
+
+    rows = []
+    for position, decision in enumerate(decisions):
+        source_row = source.iloc[position]
+        issue_id = decision.classification.issue_type
+        created_at = source_row.get("created_at", pd.NaT)
+        if pd.isna(created_at):
+            # Dashboard activity charts require valid timestamps. Keep the ticket,
+            # using NaT only when the source has no usable time.
+            created_at = pd.NaT
+        rows.append({
+            "ticket_id": str(source_row["ticket_id"]),
+            "customer_id": str(source_row["customer_id"]),
+            "created_at": created_at,
+            "raw_text": decision.raw_text,
+            "normalized_text": decision.normalization.normalized,
+            "issue_id": issue_id,
+            "department_id": decision.department_id,
+            "confidence": float(decision.classification.confidence),
+            "priority": decision.urgency.priority,
+            "needs_review": bool(decision.needs_human_review),
+            "entities": ", ".join(
+                f"{item.kind} {item.value}" for item in entity_views(decision.entities)
+            ),
+            "group_id": taxonomy.get_issue(issue_id).incident_group,
+            "ground_truth_issue_id": source_row.get("ground_truth_issue_id"),
+            "ground_truth_department_id": source_row.get("ground_truth_department_id"),
+        })
+
+    frame = pd.DataFrame(rows)
+    # Normalize timestamp dtype even if every timestamp is missing.
+    frame["created_at"] = pd.to_datetime(frame["created_at"], errors="coerce")
+    missing_times = int(frame["created_at"].isna().sum())
+    if missing_times:
+        frame.attrs["timestamp_warning"] = (
+            f"{missing_times} ticket(s) have missing or invalid timestamps; "
+            "they are retained but cannot appear in time-based charts."
+        )
+    return frame
 
 
 def load_incidents() -> list[IncidentView] | None:
-    """Potential incidents (needs ``supportai.incidents``)."""
+    """Potential incidents (requires the real supportai.incidents detector)."""
     return None
 
 
 def load_replay() -> ReplayData | None:
-    """Simulated replay bundle (needs ``supportai.replay``)."""
+    """Replay bundle (requires the real supportai.replay implementation)."""
     return None
 
 
 def load_evaluation() -> EvaluationReport | None:
-    """Evaluation report (needs ``supportai.evaluation``)."""
+    """Evaluation report (requires the real supportai.evaluation implementation)."""
     return None
