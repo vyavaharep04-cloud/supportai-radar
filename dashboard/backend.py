@@ -183,7 +183,7 @@ def normalizer_info() -> dict[str, str | int]:
 # real detection/replay/evaluation algorithms are implemented. -----------------
 
 
-def _configured_ticket_path() -> "Path | None":
+def _configured_ticket_path():
     """Resolve an optional inference CSV path from SUPPORTAI_TICKETS_CSV."""
     import os
     from pathlib import Path
@@ -197,46 +197,75 @@ def _configured_ticket_path() -> "Path | None":
     return path
 
 
-@lru_cache(maxsize=1)
-def _load_input_csv(path_text: str, modified_ns: int, size: int) -> pd.DataFrame:
-    """Load a configured CSV and cache it until its file metadata changes."""
-    from supportai.ingestion import load_tickets
+@lru_cache(maxsize=8)
+def _read_inference_csv(path_text: str, modified_ns: int, size: int) -> pd.DataFrame:
+    """Read a minimal ticket-input CSV; labels are optional and never predictions."""
+    from pathlib import Path
 
-    return load_tickets(path_text)
+    path = Path(path_text)
+    try:
+        frame = pd.read_csv(path)
+    except pd.errors.EmptyDataError as exc:
+        raise ValueError(f"Configured ticket CSV is empty: {path}") from exc
+    except pd.errors.ParserError as exc:
+        raise ValueError(f"Unable to parse configured ticket CSV: {exc}") from exc
+
+    frame.columns = frame.columns.astype(str).str.strip()
+    required = {"ticket_id", "customer_id", "timestamp", "raw_text"}
+    missing = sorted(required - set(frame.columns))
+    if missing:
+        raise ValueError(
+            "Configured ticket CSV is missing required input columns: "
+            + ", ".join(missing)
+        )
+    if frame.empty:
+        raise ValueError(f"Configured ticket CSV has no records: {path}")
+
+    for column in ("ticket_id", "customer_id", "raw_text"):
+        frame[column] = frame[column].astype("string").str.strip()
+
+    invalid = (
+        frame["ticket_id"].isna() | frame["ticket_id"].eq("")
+        | frame["customer_id"].isna() | frame["customer_id"].eq("")
+        | frame["raw_text"].isna() | frame["raw_text"].eq("")
+    )
+    frame = frame.loc[~invalid].copy().reset_index(drop=True)
+    if frame.empty:
+        raise ValueError("Configured ticket CSV has no valid ticket rows.")
+
+    frame["created_at"] = pd.to_datetime(frame["timestamp"], errors="coerce")
+    # Optional source labels are preserved only as ground truth for later evaluation.
+    if "issue_type" in frame.columns:
+        frame["ground_truth_issue_id"] = frame["issue_type"]
+    if "department" in frame.columns:
+        frame["ground_truth_department_id"] = frame["department"]
+    return frame
 
 
 def load_tickets() -> pd.DataFrame | None:
-    """Return model predictions for the configured input CSV, or None if unset.
+    """Analyze rows from an explicitly configured input CSV.
 
-    Expected source columns are those required by supportai.ingestion. Ground-truth
-    labels are retained under separate columns and are never used as predictions.
+    Set SUPPORTAI_TICKETS_CSV to a CSV with ticket_id, customer_id, timestamp,
+    and raw_text columns. Labels are optional and are never treated as predictions.
     """
-    from pathlib import Path
-
     path = _configured_ticket_path()
     if path is None:
         return None
     if not path.is_file():
         raise FileNotFoundError(f"Configured SUPPORTAI_TICKETS_CSV does not exist: {path}")
 
-    source = _load_input_csv(str(path), path.stat().st_mtime_ns, path.stat().st_size)
+    source = _read_inference_csv(str(path), path.stat().st_mtime_ns, path.stat().st_size)
     decisions = analyze_dataframe(source, text_column="raw_text")
-    normalizer = get_default_normalizer()
     taxonomy = get_taxonomy()
 
     rows = []
     for position, decision in enumerate(decisions):
         source_row = source.iloc[position]
         issue_id = decision.classification.issue_type
-        created_at = source_row.get("created_at", pd.NaT)
-        if pd.isna(created_at):
-            # Dashboard activity charts require valid timestamps. Keep the ticket,
-            # using NaT only when the source has no usable time.
-            created_at = pd.NaT
         rows.append({
             "ticket_id": str(source_row["ticket_id"]),
             "customer_id": str(source_row["customer_id"]),
-            "created_at": created_at,
+            "created_at": source_row["created_at"],
             "raw_text": decision.raw_text,
             "normalized_text": decision.normalization.normalized,
             "issue_id": issue_id,
@@ -253,7 +282,6 @@ def load_tickets() -> pd.DataFrame | None:
         })
 
     frame = pd.DataFrame(rows)
-    # Normalize timestamp dtype even if every timestamp is missing.
     frame["created_at"] = pd.to_datetime(frame["created_at"], errors="coerce")
     missing_times = int(frame["created_at"].isna().sum())
     if missing_times:
