@@ -77,13 +77,8 @@ def test_a_module_that_exists_without_an_adapter_is_not_reported_as_connected(mo
     assert caps["classifier"].connected
 
     # Existing modules without adapters must remain disconnected.
-    for key in (
-        "ingestion",
-        "playbooks",
-        "incidents",
-        "replay",
-        "evaluation",
-    ):
+    assert caps["ingestion"].connected
+    for key in ("playbooks", "incidents", "replay", "evaluation"):
         assert not caps[key].connected
         assert "adapter is not written" in caps[key].detail
 
@@ -163,10 +158,13 @@ def test_unconnected_loaders_return_none(loader):
 def test_configured_ticket_loader_returns_none_without_path(monkeypatch):
     monkeypatch.delenv("SUPPORTAI_TICKETS_CSV", raising=False)
     backend._read_inference_csv.cache_clear()
+    backend._analyze_input_csv.cache_clear()
     assert backend.load_tickets() is None
 
 
 def test_configured_ticket_loader_runs_predictions_not_ground_truth(tmp_path, monkeypatch):
+    from types import SimpleNamespace
+
     path = tmp_path / "incoming.csv"
     pd.DataFrame({
         "ticket_id": ["T-100", "T-101"],
@@ -178,13 +176,36 @@ def test_configured_ticket_loader_runs_predictions_not_ground_truth(tmp_path, mo
     }).to_csv(path, index=False)
     monkeypatch.setenv("SUPPORTAI_TICKETS_CSV", str(path))
     backend._read_inference_csv.cache_clear()
+    backend._analyze_input_csv.cache_clear()
+
+    fake_decisions = [
+        SimpleNamespace(
+            raw_text="UPI payment failed",
+            normalization=SimpleNamespace(normalized="upi payment failed"),
+            classification=SimpleNamespace(issue_type="payment_failed", confidence=0.9),
+            department_id="payments_billing",
+            urgency=SimpleNamespace(priority="P3"),
+            needs_human_review=False,
+            entities={},
+        ),
+        SimpleNamespace(
+            raw_text="My order delivery is late",
+            normalization=SimpleNamespace(normalized="my order delivery is late"),
+            classification=SimpleNamespace(issue_type="order_delay", confidence=0.8),
+            department_id="orders_delivery",
+            urgency=SimpleNamespace(priority="P3"),
+            needs_human_review=False,
+            entities={},
+        ),
+    ]
+    monkeypatch.setattr(backend, "analyze_dataframe", lambda *a, **k: fake_decisions)
 
     result = backend.load_tickets()
 
     assert result is not None
     assert set(contracts.TICKET_COLUMNS) <= set(result.columns)
     assert len(result) == 2
-    assert result["issue_id"].tolist() != ["order_delay", "payment_failed"]
+    assert result["issue_id"].tolist() == ["payment_failed", "order_delay"]
     assert result["ground_truth_issue_id"].tolist() == ["order_delay", "payment_failed"]
     assert result["priority"].isin(contracts.PRIORITIES).all()
     assert pd.api.types.is_datetime64_any_dtype(result["created_at"])
@@ -195,6 +216,7 @@ def test_configured_ticket_loader_rejects_missing_input_columns(tmp_path, monkey
     pd.DataFrame({"ticket_id": ["T-1"], "raw_text": ["payment failed"]}).to_csv(path, index=False)
     monkeypatch.setenv("SUPPORTAI_TICKETS_CSV", str(path))
     backend._read_inference_csv.cache_clear()
+    backend._analyze_input_csv.cache_clear()
 
     with pytest.raises(ValueError, match="missing required input columns"):
         backend.load_tickets()
@@ -210,6 +232,18 @@ def test_configured_ticket_loader_keeps_rows_with_invalid_timestamps(tmp_path, m
     }).to_csv(path, index=False)
     monkeypatch.setenv("SUPPORTAI_TICKETS_CSV", str(path))
     backend._read_inference_csv.cache_clear()
+    backend._analyze_input_csv.cache_clear()
+    from types import SimpleNamespace
+    fake = SimpleNamespace(
+        raw_text="UPI payment failed",
+        normalization=SimpleNamespace(normalized="upi payment failed"),
+        classification=SimpleNamespace(issue_type="payment_failed", confidence=0.9),
+        department_id="payments_billing",
+        urgency=SimpleNamespace(priority="P3"),
+        needs_human_review=False,
+        entities={},
+    )
+    monkeypatch.setattr(backend, "analyze_dataframe", lambda *a, **k: [fake])
 
     result = backend.load_tickets()
 
