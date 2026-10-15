@@ -93,9 +93,9 @@ def render() -> None:
     if src is None:
         left, right = st.columns([1.3, 1], gap="large")
         with left:
-            ui.empty_state("No incident detector connected yet",
-                           "Alerts, evidence and explanations appear here once the incident detection module is connected. "
-                           "No alerts are simulated in this view.", interface=INTERFACE, icon="◎")
+            ui.empty_state("No live ticket data connected yet",
+                           "Configure SUPPORTAI_TICKETS_CSV to run incident detection on ticket data. "
+                           "Enable Design preview to explore clearly labelled synthetic examples.", interface=INTERFACE, icon="◎")
         with right:
             ui.render(_how_it_works())
         return
