@@ -76,9 +76,10 @@ def test_a_module_that_exists_without_an_adapter_is_not_reported_as_connected(mo
     assert caps["taxonomy"].connected
     assert caps["classifier"].connected
 
-    # Existing modules without adapters must remain disconnected.
+    # Implemented adapters are connected; the explainer is a separate unfinished feature.
     assert caps["ingestion"].connected
-    for key in ("playbooks", "incidents", "replay", "evaluation"):
+    assert caps["incidents"].connected
+    for key in ("playbooks", "incident_explainer", "replay", "evaluation"):
         assert not caps[key].connected
         assert "adapter is not written" in caps[key].detail
 
@@ -149,9 +150,49 @@ def test_entities_stage_is_none_when_the_module_is_not_connected(monkeypatch):
     assert backend.analyze_ticket("order ORD123456").entities is None
 
 
-@pytest.mark.parametrize("loader", ["load_tickets", "load_incidents", "load_replay", "load_evaluation"])
+@pytest.mark.parametrize("loader", ["load_tickets", "load_replay", "load_evaluation"])
 def test_unconnected_loaders_return_none(loader):
     assert getattr(backend, loader)() is None
+
+
+def test_incident_page_explains_missing_live_ticket_data(monkeypatch):
+    monkeypatch.delenv("SUPPORTAI_TICKETS_CSV", raising=False)
+    backend._read_inference_csv.cache_clear()
+    backend._analyze_input_csv.cache_clear()
+    at = run_page("incidents", preview=False)
+    assert not at.exception
+    md = markdown_of(at)
+    assert "No live ticket data connected yet" in md
+    assert "SUPPORTAI_TICKETS_CSV" in md
+
+
+def test_incident_loader_returns_dashboard_view_models(monkeypatch):
+    rows = []
+    base = pd.Timestamp("2026-10-10T00:00:00Z")
+    for window in range(4):
+        for customer in range(2):
+            rows.append({
+                "ticket_id": f"H-{window}-{customer}",
+                "customer_id": f"C-{window}-{customer}",
+                "created_at": base + pd.Timedelta(minutes=30 * window),
+                "group_id": "payment_checkout",
+            })
+    for customer in range(6):
+        rows.append({
+            "ticket_id": f"I-{customer}",
+            "customer_id": f"INC-{customer}",
+            "created_at": base + pd.Timedelta(minutes=120),
+            "group_id": "payment_checkout",
+        })
+    monkeypatch.setattr(backend, "load_tickets", lambda: pd.DataFrame(rows))
+
+    incidents = backend.load_incidents()
+
+    assert incidents is not None
+    assert len(incidents) == 1
+    assert isinstance(incidents[0], contracts.IncidentView)
+    assert incidents[0].group_id == "payment_checkout"
+    assert incidents[0].status == "alert"
 
 
 

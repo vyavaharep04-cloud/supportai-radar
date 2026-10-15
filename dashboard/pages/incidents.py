@@ -17,8 +17,8 @@ INTERFACE = (
     "# dashboard.backend.load_incidents() -> list[dashboard.contracts.IncidentView]\n"
     "# IncidentView: incident_id, group_id (taxonomy incident_group), window_start, window_end,\n"
     "#   unique_customers, raw_tickets, baseline_customers, severity, status, ticket_ids, explanation\n"
-    "# Detection counts DISTINCT customers per incident group in a rolling window and compares them\n"
-    "# with a historical baseline. 'other' tickets never participate."
+    "# Detection counts DISTINCT customers in fixed windows and compares them\n"
+    "# with preceding consecutive windows. 'other' tickets never participate."
 )
 DISCLAIMER = ("Potential incidents are inferred from ticket volume across distinct customers. "
               "They do not confirm an outage or establish its root cause.")
@@ -27,11 +27,11 @@ DISCLAIMER = ("Potential incidents are inferred from ticket volume across distin
 def _how_it_works() -> str:
     steps = [
         ("1 · Group", "Each ticket's issue type maps to an incident group in the taxonomy. “Other” tickets are excluded."),
-        ("2 · Count customers", "Within a rolling time window, count distinct customers, not tickets, so one person repeating a complaint cannot raise an alert."),
-        ("3 · Compare to baseline", "The count is compared with a historical baseline for the same group and window length."),
+        ("2 · Count customers", "Within each fixed time window, count distinct customers, not tickets, so one person repeating a complaint cannot raise an alert."),
+        ("3 · Compare to baseline", "The count is compared with the immediately preceding consecutive windows; empty windows count as zero."),
         ("4 · Explain", "Each alert lists the evidence: customers, window, baseline ratio and linked tickets."),
     ]
-    return ui.card("How detection will work (frozen design)", "".join(
+    return ui.card("How detection works", "".join(
         f'<div class="sr-kv" style="display:block"><div class="v" style="text-align:left">{ui.esc(t)}</div><div class="sr-mini">{ui.esc(b)}</div></div>' for t, b in steps))
 
 
@@ -93,9 +93,10 @@ def render() -> None:
     if src is None:
         left, right = st.columns([1.3, 1], gap="large")
         with left:
-            ui.empty_state("No incident detector connected yet",
-                           "Alerts, evidence and explanations appear here once the incident detection module is connected. "
-                           "No alerts are simulated in this view.", interface=INTERFACE, icon="◎")
+            ui.empty_state("No live ticket data connected yet",
+                           "Configure SUPPORTAI_TICKETS_CSV to run incident detection on ticket data. "
+                           "Enable Design preview to explore clearly labelled synthetic examples.", interface=INTERFACE, icon="◎")
+            st.markdown("**To connect data:** set `SUPPORTAI_TICKETS_CSV` to your ticket CSV path, then restart the dashboard.")
         with right:
             ui.render(_how_it_works())
         return
@@ -103,7 +104,7 @@ def render() -> None:
         ui.demo_banner("Incidents shown come from a scripted illustrative detector over synthetic tickets.")
     incidents = src.data
     if not incidents:
-        ui.empty_state("No potential incidents", "Ticket volume from distinct customers is within the historical baseline.", icon="✓")
+        ui.empty_state("No potential incidents met the alert thresholds", "No evaluated window crossed the detector thresholds. Sparse data or insufficient history can limit detection; this does not prove that no incident occurred.", icon="✓")
         return
     tk = data_access.tickets()
     labels, depts = issue_labels(tx), department_labels(tx)

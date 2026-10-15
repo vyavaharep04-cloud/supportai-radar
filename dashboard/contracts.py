@@ -222,7 +222,7 @@ CAPABILITY_SPECS: tuple[CapabilitySpec, ...] = (
         "get_playbook(issue_id) -> Playbook",
     ),
     CapabilitySpec(
-        "incidents", "Incident detection & explanation", "DETECT", "supportai.incidents", False,
+        "incidents", "Incident detection & explanation", "DETECT", "supportai.incidents", True,
         "detect_incidents(tickets) -> list[Incident]",
     ),
     CapabilitySpec(
