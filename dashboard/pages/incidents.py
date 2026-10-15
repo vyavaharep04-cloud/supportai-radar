@@ -27,11 +27,11 @@ DISCLAIMER = ("Potential incidents are inferred from ticket volume across distin
 def _how_it_works() -> str:
     steps = [
         ("1 · Group", "Each ticket's issue type maps to an incident group in the taxonomy. “Other” tickets are excluded."),
-        ("2 · Count customers", "Within a rolling time window, count distinct customers, not tickets, so one person repeating a complaint cannot raise an alert."),
-        ("3 · Compare to baseline", "The count is compared with a historical baseline for the same group and window length."),
+        ("2 · Count customers", "Within each fixed time window, count distinct customers, not tickets, so one person repeating a complaint cannot raise an alert."),
+        ("3 · Compare to baseline", "The count is compared with the immediately preceding consecutive windows; empty windows count as zero."),
         ("4 · Explain", "Each alert lists the evidence: customers, window, baseline ratio and linked tickets."),
     ]
-    return ui.card("How detection will work (frozen design)", "".join(
+    return ui.card("How detection works", "".join(
         f'<div class="sr-kv" style="display:block"><div class="v" style="text-align:left">{ui.esc(t)}</div><div class="sr-mini">{ui.esc(b)}</div></div>' for t, b in steps))
 
 
@@ -103,7 +103,7 @@ def render() -> None:
         ui.demo_banner("Incidents shown come from a scripted illustrative detector over synthetic tickets.")
     incidents = src.data
     if not incidents:
-        ui.empty_state("No potential incidents", "Ticket volume from distinct customers is within the historical baseline.", icon="✓")
+        ui.empty_state("No potential incidents met the alert thresholds", "No evaluated window crossed the detector thresholds. Sparse data or insufficient history can limit detection; this does not prove that no incident occurred.", icon="✓")
         return
     tk = data_access.tickets()
     labels, depts = issue_labels(tx), department_labels(tx)
