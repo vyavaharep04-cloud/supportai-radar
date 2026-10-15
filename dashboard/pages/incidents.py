@@ -96,6 +96,7 @@ def render() -> None:
             ui.empty_state("No live ticket data connected yet",
                            "Configure SUPPORTAI_TICKETS_CSV to run incident detection on ticket data. "
                            "Enable Design preview to explore clearly labelled synthetic examples.", interface=INTERFACE, icon="◎")
+            st.markdown("**To connect data:** set `SUPPORTAI_TICKETS_CSV` to your ticket CSV path, then restart the dashboard.")
         with right:
             ui.render(_how_it_works())
         return
