@@ -98,7 +98,7 @@ def test_mixed_timezone_formats_are_normalized():
                     "group_id": "payments",
                 }
             )
-    for customer in range(5):
+    for customer in range(6):
         rows.append(
             {
                 "ticket_id": f"SPIKE-{customer}",
