@@ -155,6 +155,14 @@ def test_unconnected_loaders_return_none(loader):
     assert getattr(backend, loader)() is None
 
 
+def test_incident_page_explains_missing_live_ticket_data():
+    at = run_page("incidents", preview=False)
+    assert not at.exception
+    md = markdown_of(at)
+    assert "No live ticket data connected yet" in md
+    assert "SUPPORTAI_TICKETS_CSV" in md
+
+
 def test_incident_loader_returns_dashboard_view_models(monkeypatch):
     rows = []
     base = pd.Timestamp("2026-10-10T00:00:00Z")
