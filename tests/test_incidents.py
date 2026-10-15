@@ -151,3 +151,8 @@ def test_invalid_rows_and_empty_groups_are_ignored():
     incidents = detect_incidents(tickets)
     assert len(incidents) == 1
     assert incidents[0].unique_customers == 6
+
+
+def test_insufficient_history_does_not_emit_incident():
+    tickets = make_tickets().iloc[:4].copy()
+    assert detect_incidents(tickets) == []
