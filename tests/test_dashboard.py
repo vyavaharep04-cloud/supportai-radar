@@ -155,7 +155,10 @@ def test_unconnected_loaders_return_none(loader):
     assert getattr(backend, loader)() is None
 
 
-def test_incident_page_explains_missing_live_ticket_data():
+def test_incident_page_explains_missing_live_ticket_data(monkeypatch):
+    monkeypatch.delenv("SUPPORTAI_TICKETS_CSV", raising=False)
+    backend._read_inference_csv.cache_clear()
+    backend._analyze_input_csv.cache_clear()
     at = run_page("incidents", preview=False)
     assert not at.exception
     md = markdown_of(at)
