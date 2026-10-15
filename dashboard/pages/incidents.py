@@ -17,8 +17,8 @@ INTERFACE = (
     "# dashboard.backend.load_incidents() -> list[dashboard.contracts.IncidentView]\n"
     "# IncidentView: incident_id, group_id (taxonomy incident_group), window_start, window_end,\n"
     "#   unique_customers, raw_tickets, baseline_customers, severity, status, ticket_ids, explanation\n"
-    "# Detection counts DISTINCT customers per incident group in a rolling window and compares them\n"
-    "# with a historical baseline. 'other' tickets never participate."
+    "# Detection counts DISTINCT customers in fixed windows and compares them\n"
+    "# with preceding consecutive windows. 'other' tickets never participate."
 )
 DISCLAIMER = ("Potential incidents are inferred from ticket volume across distinct customers. "
               "They do not confirm an outage or establish its root cause.")
