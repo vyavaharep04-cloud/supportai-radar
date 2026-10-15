@@ -9,7 +9,7 @@ Rules
 * Connecting a new module means editing ONE function below so that it returns
   the shapes defined in ``dashboard.contracts``.
 
-Currently connected: configured CSV ticket input, normalization, entity extraction, classification, taxonomy, review routing, and urgency.
+Currently connected: configured CSV ticket input, normalization, entity extraction, classification, taxonomy, review routing, urgency, and incident detection.
 """
 
 from __future__ import annotations
@@ -300,8 +300,30 @@ def load_tickets() -> pd.DataFrame | None:
 
 
 def load_incidents() -> list[IncidentView] | None:
-    """Potential incidents (requires the real supportai.incidents detector)."""
-    return None
+    """Return potential incidents detected from configured ticket data."""
+    tickets = load_tickets()
+    if tickets is None or tickets.empty:
+        return None
+
+    from supportai.incidents import detect_incidents
+
+    detected = detect_incidents(tickets)
+    return [
+        IncidentView(
+            incident_id=item.incident_id,
+            group_id=item.group_id,
+            window_start=item.window_start,
+            window_end=item.window_end,
+            unique_customers=item.unique_customers,
+            raw_tickets=item.raw_tickets,
+            baseline_customers=item.baseline_customers,
+            severity=item.severity,
+            status=item.status,
+            ticket_ids=item.ticket_ids,
+            explanation=item.explanation,
+        )
+        for item in detected
+    ]
 
 
 def load_replay() -> ReplayData | None:
