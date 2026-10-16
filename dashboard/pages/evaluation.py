@@ -44,9 +44,31 @@ def render() -> None:
     labels = issue_labels(tx)
     if ev.dataset_note:
         ui.mini("Data: " + ev.dataset_note)
-    ui.kpi_row([("Accuracy", f"{ev.accuracy:.1%}", "all issue types"), ("Macro F1", f"{ev.macro_f1:.3f}", "mean over issue types"),
-                ("Critical recall (P1)", f"{ev.critical_recall:.1%}", "share of true P1 tickets caught", "success" if ev.critical_recall >= 0.9 else "warning"),
-                ("Critical precision (P1)", f"{ev.critical_precision:.1%}", "share of flagged P1 that are P1")])
+        kpis = [
+        ("Accuracy", f"{ev.accuracy:.1%}", "all issue types"),
+        ("Macro F1", f"{ev.macro_f1:.3f}", "mean over issue types"),
+    ]
+
+    if ev.critical_recall is not None:
+        kpis.append(
+            (
+                "Critical recall (P1)",
+                f"{ev.critical_recall:.1%}",
+                "share of true P1 tickets caught",
+                "success" if ev.critical_recall >= 0.9 else "warning",
+            )
+        )
+
+    if ev.critical_precision is not None:
+        kpis.append(
+            (
+                "Critical precision (P1)",
+                f"{ev.critical_precision:.1%}",
+                "share of flagged P1 that are P1",
+            )
+        )
+
+    ui.kpi_row(kpis)
 
     ui.section("Classification", "Where the classifier confuses issue types, and per-type scores.")
     a, b = st.columns([1.15, 1], gap="large")
@@ -68,9 +90,36 @@ def render() -> None:
                            "Auto-routed accuracy": th["auto_accuracy"].map("{:.1%}".format)})
         st.dataframe(th, hide_index=True, **stretch())
 
-    ui.section("Incident detection", "Detection delay for planted incidents and false alerts on decoys.")
+        ui.section(
+        "Incident detection",
+        "Detection delay for planted incidents and false alerts on decoys.",
+    )
+
     sc = ev.incident_scenarios.copy()
-    sc["Detected"] = sc["detected"].map({True: "Yes", False: "No alert"})
-    sc["Delay"] = sc["delay_minutes"].map(lambda m: "—" if pd.isna(m) else f"{m:.0f} min")
-    out = sc.rename(columns={"scenario": "Scenario", "kind": "Kind", "false_alerts": "False alerts"})[["Scenario", "Kind", "Detected", "Delay", "False alerts"]]
-    st.dataframe(out, hide_index=True, **stretch())
+
+    if sc.empty:
+        ui.empty_state(
+            "Incident evaluation not available yet",
+            "Incident replay scenarios have not been evaluated. "
+            "No detection or false-alert metrics are reported here yet.",
+            icon="🔬",
+        )
+    else:
+        sc["Detected"] = sc["detected"].map(
+            {True: "Yes", False: "No alert"}
+        )
+        sc["Delay"] = sc["delay_minutes"].map(
+            lambda m: "—" if pd.isna(m) else f"{m:.0f} min"
+        )
+
+        out = sc.rename(
+            columns={
+                "scenario": "Scenario",
+                "kind": "Kind",
+                "false_alerts": "False alerts",
+            }
+        )[
+            ["Scenario", "Kind", "Detected", "Delay", "False alerts"]
+        ]
+
+        st.dataframe(out, hide_index=True, **stretch())

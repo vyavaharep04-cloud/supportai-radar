@@ -1,0 +1,30 @@
+# Incident-detector settings used by the dashboard's live incident path.
+#
+# All five keys are required (a missing key would silently fall back to the
+# detector's built-in default, so omissions are rejected). Values are checked
+# by supportai.incidents.load_incident_params using the detector's own rules.
+#
+# Only min_customers differs from the detector's built-in defaults.
+#
+# Why min_customers is 25 (measured on the project's synthetic replay scenario,
+# 30-minute windows, predicted groups, 10 generator seeds):
+#   * 5 (the built-in default): the planted incident is found, but with 33 false
+#     alerts and 54 false watches, and the order-delay decoy alerts in every seed.
+#   * 22 to 30: the planted incident is found in all 10 seeds with no false
+#     alerts and no false watches.
+#   * 33 and above: the real incident starts to be missed (8/10 at 33, 2/10 at 36).
+#   * 25 detects the planted incident at every tested start time (shifted off
+#     the window boundary by 0 to 25 minutes), 30 does not.
+# 25 is therefore the middle of the verified band.
+#
+# Limitations: this is an absolute floor tuned on synthetic data. In that
+# scenario the planted incident reaches 33 distinct customers in a window, the
+# order-delay decoy 21, and ordinary traffic 9 or fewer. Real traffic volumes
+# will need their own value, so treat this as the prototype's initial setting,
+# not a universal constant. The detector's algorithm is unchanged.
+
+window_minutes: 30
+min_customers: 25
+watch_ratio: 2.0
+alert_ratio: 3.0
+min_baseline_windows: 3

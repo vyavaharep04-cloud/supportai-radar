@@ -302,12 +302,14 @@ def load_tickets() -> pd.DataFrame | None:
 def load_incidents() -> list[IncidentView] | None:
     """Return potential incidents detected from configured ticket data."""
     tickets = load_tickets()
+
     if tickets is None or tickets.empty:
         return None
 
-    from supportai.incidents import detect_incidents
+    from supportai.incidents import detect_incidents, load_incident_params
 
-    detected = detect_incidents(tickets)
+    detected = detect_incidents(tickets, **load_incident_params())
+
     return [
         IncidentView(
             incident_id=item.incident_id,
@@ -332,5 +334,36 @@ def load_replay() -> ReplayData | None:
 
 
 def load_evaluation() -> EvaluationReport | None:
-    """Evaluation report (requires the real supportai.evaluation implementation)."""
-    return None
+    """Return evaluation metrics only when the evaluation adapter is enabled."""
+
+    if not is_connected("evaluation"):
+        return None
+
+    from supportai.evaluation import evaluate_classifier
+
+    result = evaluate_classifier()
+
+    return EvaluationReport(
+        accuracy=result["accuracy"],
+        macro_f1=result["macro_f1"],
+        per_class=result["per_class"],
+        confusion=result["confusion"],
+        critical_recall=result["critical_recall"],
+        critical_precision=result["critical_precision"],
+        thresholds=result["thresholds"],
+        incident_scenarios=pd.DataFrame(
+            columns=[
+                "scenario",
+                "kind",
+                "detected",
+                "delay_minutes",
+                "false_alerts",
+            ]
+        ),
+        dataset_note=result["dataset_note"],
+        extras={
+            "training_samples": result["training_samples"],
+            "test_samples": result["test_samples"],
+            "issue_classes": result["issue_classes"],
+        },
+    )

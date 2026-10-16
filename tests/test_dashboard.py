@@ -96,7 +96,7 @@ def test_analyze_ticket_uses_real_backend_stages_and_invents_nothing():
 
     text = (
         "Paisa kat gaya but order nahi aaya!!! "
-        "₹1,299.50 deducted, order ORD482913"
+        "â‚¹1,299.50 deducted, order ORD482913"
     )
 
     analysis = backend.analyze_ticket(text)
@@ -133,7 +133,7 @@ def test_entity_views_translates_every_entity_kind():
         "payment_methods": ["credit_card"], "products": ["mobile_phone"],
     })
     assert [(v.kind, v.value) for v in views] == [
-        ("amount", "₹1,299.50"), ("amount", "₹499"), ("order id", "ORD1"), ("transaction id", "TXN9"),
+        ("amount", "\u20b91,299.50"), ("amount", "\u20b9499"), ("order id", "ORD1"), ("transaction id", "TXN9"),
         ("payment method", "credit card"), ("product", "mobile phone"),
     ]
     assert backend.entity_views({}) == ()
@@ -184,7 +184,20 @@ def test_incident_loader_returns_dashboard_view_models(monkeypatch):
             "created_at": base + pd.Timedelta(minutes=120),
             "group_id": "payment_checkout",
         })
-    monkeypatch.setattr(backend, "load_tickets", lambda: pd.DataFrame(rows))
+        monkeypatch.setattr(backend, "load_tickets", lambda: pd.DataFrame(rows))
+
+    # This test checks view-model translation for a small spike, independently
+    # of the tuned incident threshold.
+    monkeypatch.setattr(
+        "supportai.incidents.load_incident_params",
+        lambda *args, **kwargs: {
+            "window_minutes": 30,
+            "min_customers": 5,
+            "watch_ratio": 2.0,
+            "alert_ratio": 3.0,
+            "min_baseline_windows": 3,
+        },
+    )
 
     incidents = backend.load_incidents()
 
@@ -537,13 +550,13 @@ def test_analysis_runs_live_normalization_and_marks_unconnected_stages():
 
 def test_analysis_shows_real_extracted_entities_as_chips():
     at = AppTest.from_string(SCRIPT.format(page="analysis", preview=False)).run()
-    at.text_area(key="analysis_text").set_value("Refund of ₹2,499 pending for order ORD123456 paid by UPI")
+    at.text_area(key="analysis_text").set_value("Refund of \u20b92,499 pending for order ORD123456 paid by UPI")
     at.button[0].click().run()
     assert not at.exception
     md = markdown_of(at)
-    for expected in ("₹2,499", "ORD123456", "upi"):
+    for expected in ("\u20b92,499", "ORD123456", "upi"):
         assert expected in md
-    assert "Understand · extract entities" in md
+    assert "Understand \u00b7 extract entities" in md
 
 
 def test_analysis_empty_input_shows_empty_state_not_a_result():

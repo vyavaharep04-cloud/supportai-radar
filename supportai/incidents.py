@@ -6,7 +6,7 @@ from dataclasses import dataclass
 import math
 
 import pandas as pd
-
+from supportai.config import CONFIG_DIR, ConfigError, read_yaml
 
 @dataclass(frozen=True)
 class Incident:
@@ -183,3 +183,55 @@ def detect_incidents(
         ),
         reverse=True,
     )
+
+DEFAULT_SETTINGS_PATH = CONFIG_DIR / "incidents.yaml"
+
+SETTING_NAMES = (
+    "window_minutes",
+    "min_customers",
+    "watch_ratio",
+    "alert_ratio",
+    "min_baseline_windows",
+)
+
+
+def load_incident_params(
+    path=DEFAULT_SETTINGS_PATH,
+) -> dict[str, int | float]:
+    """Load and validate incident-detector settings from YAML."""
+    data = read_yaml(path)
+
+    missing = [name for name in SETTING_NAMES if name not in data]
+    unknown = sorted(set(data) - set(SETTING_NAMES))
+
+    if missing or unknown:
+        raise ConfigError(
+            f"{path}: expected exactly the settings {list(SETTING_NAMES)}"
+            f" (missing {missing}, unexpected {unknown})."
+        )
+
+    params = {name: data[name] for name in SETTING_NAMES}
+
+    empty = pd.DataFrame(
+        {
+            column: []
+            for column in (
+                "ticket_id",
+                "customer_id",
+                "created_at",
+                "group_id",
+            )
+        }
+    )
+
+    try:
+        detect_incidents(empty, **params)
+    except (TypeError, ValueError) as exc:
+        raise ConfigError(
+            f"{path}: invalid incident setting. {exc}"
+        ) from exc
+
+    params["watch_ratio"] = float(params["watch_ratio"])
+    params["alert_ratio"] = float(params["alert_ratio"])
+
+    return params

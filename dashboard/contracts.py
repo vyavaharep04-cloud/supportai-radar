@@ -162,17 +162,16 @@ class ReplayData:
     window_minutes: int
     description: str = ""
 
-
 @dataclass(frozen=True)
 class EvaluationReport:
     accuracy: float
     macro_f1: float
-    per_class: "pd.DataFrame"  # issue_id, precision, recall, f1, support
-    confusion: "pd.DataFrame"  # rows = true issue_id, columns = predicted issue_id
-    critical_recall: float
-    critical_precision: float
-    thresholds: "pd.DataFrame"  # threshold, review_rate, auto_accuracy
-    incident_scenarios: "pd.DataFrame"  # scenario, kind, detected, delay_minutes, false_alerts
+    per_class: "pd.DataFrame"
+    confusion: "pd.DataFrame"
+    critical_recall: float | None
+    critical_precision: float | None
+    thresholds: "pd.DataFrame"
+    incident_scenarios: "pd.DataFrame"
     dataset_note: str = ""
     extras: dict = field(default_factory=dict)
 
