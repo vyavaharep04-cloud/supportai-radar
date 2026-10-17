@@ -329,8 +329,14 @@ def load_incidents() -> list[IncidentView] | None:
 
 
 def load_replay() -> ReplayData | None:
-    """Replay bundle (requires the real supportai.replay implementation)."""
-    return None
+    """Build a chronological replay from configured tickets, if available."""
+    tickets = load_tickets()
+    if tickets is None or tickets.empty:
+        return None
+
+    from supportai.replay import run_replay
+
+    return run_replay(tickets)
 
 
 def load_evaluation() -> EvaluationReport | None:
