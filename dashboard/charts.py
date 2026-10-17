@@ -157,13 +157,17 @@ def replay_chart(
     pts = pts[pts["created_at"] <= now]
     pts["lane"] = -0.16 * top
     seg_domain = list(SEGMENT_COLORS)
+    extra_segments = sorted(set(pts["segment"].dropna().astype(str)) - set(seg_domain))
+    seg_domain.extend(extra_segments)
+    seg_colors = [SEGMENT_COLORS[k] for k in SEGMENT_COLORS] + ["#475569" for _ in extra_segments]
+    seg_shapes = ["circle", "diamond", "triangle-up"] + ["square" for _ in extra_segments]
     ticket_pts = (
         alt.Chart(pts)
         .mark_point(filled=True, size=40, opacity=0.8)
         .encode(
             x=x("created_at"), y=alt.Y("lane:Q", scale=y_scale),
-            color=alt.Color("segment:N", scale=alt.Scale(domain=seg_domain, range=[SEGMENT_COLORS[k] for k in seg_domain]), title="Ticket (synthetic label)"),
-            shape=alt.Shape("segment:N", scale=alt.Scale(domain=seg_domain, range=["circle", "diamond", "triangle-up"]), title="Ticket (synthetic label)"),
+            color=alt.Color("segment:N", scale=alt.Scale(domain=seg_domain, range=seg_colors), title="Ticket label"),
+            shape=alt.Shape("segment:N", scale=alt.Scale(domain=seg_domain, range=seg_shapes), title="Ticket label"),
             tooltip=["ticket_id:N", "customer_id:N", alt.Tooltip("created_at:T", format="%d %b %H:%M"), "segment:N"],
         )
     )
