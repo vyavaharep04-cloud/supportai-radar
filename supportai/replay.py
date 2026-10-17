@@ -33,29 +33,40 @@ def run_replay(tickets: pd.DataFrame) -> ReplayData | None:
     states = {(item.group_id, pd.Timestamp(item.window_start)): item.status for item in incidents}
 
     rows = []
+    grouped_counts = {}
+    first_global = data["window_start"].min()
+    last_global = data["window_start"].max()
+    all_starts = pd.date_range(first_global, last_global, freq=window)
     for group_id, group in data.groupby("group_id", sort=True):
-        counts = group.groupby("window_start").agg(
+        grouped_counts[str(group_id)] = group.groupby("window_start").agg(
             distinct_customers=("customer_id", "nunique"),
             raw_tickets=("ticket_id", "size"),
         ).sort_index()
-        first, last = counts.index.min(), counts.index.max()
-        for start in pd.date_range(first, last, freq=window):
+
+    # Give every group the same replay ticks so the page's shared time slider
+    # always has a corresponding row for whichever group is selected.
+    for group_id, counts in grouped_counts.items():
+        first = counts.index.min()
+        for start in all_starts:
             history_index = pd.date_range(
                 end=start - window, periods=int(params["min_baseline_windows"]), freq=window
             )
-            # Match the detector: score only after a complete history is available.
-            if history_index[0] < first:
-                continue
-            history = counts["distinct_customers"].reindex(history_index, fill_value=0)
-            baseline = float(history.mean())
+            eligible = history_index[0] >= first
+            if eligible:
+                history = counts["distinct_customers"].reindex(history_index, fill_value=0)
+                baseline = float(history.mean())
+            else:
+                baseline = float("nan")
             current = counts.loc[start] if start in counts.index else None
             distinct = int(current["distinct_customers"]) if current is not None else 0
             raw = int(current["raw_tickets"]) if current is not None else 0
-            ratio = math.inf if baseline <= 0 and distinct > 0 else (distinct / baseline if baseline > 0 else 0.0)
-            state = states.get((str(group_id), pd.Timestamp(start)), "normal")
-            threshold = max(float(params["min_customers"]), float(params["alert_ratio"]) * baseline)
+            state = states.get((group_id, pd.Timestamp(start)), "normal")
+            threshold = (
+                max(float(params["min_customers"]), float(params["alert_ratio"]) * baseline)
+                if math.isfinite(baseline) else float(params["min_customers"])
+            )
             rows.append({
-                "ts": start + window, "group_id": str(group_id),
+                "ts": start + window, "group_id": group_id,
                 "distinct_customers": distinct, "raw_tickets": raw,
                 "baseline": baseline, "threshold": threshold, "state": state,
             })
