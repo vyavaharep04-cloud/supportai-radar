@@ -156,11 +156,12 @@ def replay_chart(
     pts["created_at"] = pd.to_datetime(pts["created_at"])
     pts = pts[pts["created_at"] <= now]
     pts["lane"] = -0.16 * top
-    seg_domain = list(SEGMENT_COLORS)
-    extra_segments = sorted(set(pts["segment"].dropna().astype(str)) - set(seg_domain))
+    present_segments = set(pts["segment"].dropna().astype(str))
+    seg_domain = [name for name in SEGMENT_COLORS if name in present_segments]
+    extra_segments = sorted(present_segments - set(seg_domain))
     seg_domain.extend(extra_segments)
-    seg_colors = [SEGMENT_COLORS[k] for k in SEGMENT_COLORS] + ["#475569" for _ in extra_segments]
-    seg_shapes = ["circle", "diamond", "triangle-up"] + ["square" for _ in extra_segments]
+    seg_colors = [SEGMENT_COLORS[k] for k in seg_domain if k in SEGMENT_COLORS] + ["#475569" for _ in extra_segments]
+    seg_shapes = [shape for name, shape in zip(SEGMENT_COLORS, ["circle", "diamond", "triangle-up"]) if name in present_segments] + ["square" for _ in extra_segments]
     ticket_pts = (
         alt.Chart(pts)
         .mark_point(filled=True, size=40, opacity=0.8)
