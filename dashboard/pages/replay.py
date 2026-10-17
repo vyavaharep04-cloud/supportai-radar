@@ -35,7 +35,10 @@ def render() -> None:
     src = data_access.replay()
     ui.page_header("Incident Replay", "Step through a simulated timeline and watch the detector state change as tickets arrive.",
                    badges=[ui.provenance_badge("off" if src is None else "demo" if src.is_demo else "live")])
-    ui.callout("Replay uses a simulated scenario with known planted incidents and decoys. It illustrates detector behaviour; it does not describe real outages.", "info")
+    if src is not None and src.is_demo:
+        ui.callout("Replay uses a simulated scenario with known planted incidents and decoys. It illustrates detector behaviour; it does not describe real outages.", "info")
+    elif src is not None:
+        ui.callout("Live replay uses configured ticket data and the real incident detector. Ticket markers are observed records, not planted/decoy labels; alerts indicate potential incidents, not confirmed outages.", "info")
     if src is None:
         ui.empty_state("No replay scenario connected yet",
                        "The replay needs the incident detector and a simulated scenario. No timeline is invented here.", interface=INTERFACE, icon="▶")
