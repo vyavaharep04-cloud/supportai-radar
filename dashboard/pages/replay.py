@@ -33,7 +33,12 @@ def _legend() -> str:
 
 def render() -> None:
     src = data_access.replay()
-    ui.page_header("Incident Replay", "Step through a simulated timeline and watch the detector state change as tickets arrive.",
+    subtitle = (
+        "Step through a simulated timeline and watch detector states change as tickets arrive."
+        if src is None or src.is_demo
+        else "Step through configured ticket data and inspect how the incident detector evaluates each time window."
+    )
+    ui.page_header("Incident Replay", subtitle,
                    badges=[ui.provenance_badge("off" if src is None else "demo" if src.is_demo else "live")])
     if src is not None and src.is_demo:
         ui.callout("Replay uses a simulated scenario with known planted incidents and decoys. It illustrates detector behaviour; it does not describe real outages.", "info")
