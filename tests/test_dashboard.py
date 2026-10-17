@@ -79,7 +79,8 @@ def test_a_module_that_exists_without_an_adapter_is_not_reported_as_connected(mo
     # Implemented adapters are connected; the explainer is a separate unfinished feature.
     assert caps["ingestion"].connected
     assert caps["incidents"].connected
-    for key in ("playbooks", "incident_explainer", "replay", "evaluation"):
+    assert caps["replay"].connected
+    for key in ("playbooks", "incident_explainer", "evaluation"):
         assert not caps[key].connected
         assert "adapter is not written" in caps[key].detail
 
