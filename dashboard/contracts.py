@@ -229,7 +229,7 @@ CAPABILITY_SPECS: tuple[CapabilitySpec, ...] = (
         "explain_incident(incident) -> list[str]",
     ),
     CapabilitySpec(
-        "replay", "Incident replay", "DETECT", "supportai.replay", False,
+        "replay", "Incident replay", "DETECT", "supportai.replay", True,
         "run_replay(scenario) -> ReplayResult",
     ),
     CapabilitySpec(
