@@ -80,10 +80,21 @@ def render() -> None:
 
     row = gtl[gtl["ts"] == now].iloc[0]
     seen = tickets[(tickets["group_id"] == group) & (pd.to_datetime(tickets["created_at"]) <= now)]
+    baseline_value = row["baseline"]
+    baseline_text = (
+        f"{baseline_value:.1f} / {row['threshold']:.0f}"
+        if pd.notna(baseline_value)
+        else f"Insufficient history / {row['threshold']:.0f}"
+    )
+    baseline_hint = (
+        "baseline / alert threshold (customers)"
+        if pd.notna(baseline_value)
+        else f"need {data.window_minutes * 3} minutes of prior history; alert threshold in customers"
+    )
     ui.kpi_row([
         ("Detector state", str(row["state"]).upper(), "at the selected time", {"alert": "danger", "watch": "warning"}.get(row["state"], "success")),
         ("Distinct customers", int(row["distinct_customers"]), f"in the last {data.window_minutes} minutes"),
-        ("Baseline / threshold", f"{row['baseline']:.1f} / {row['threshold']:.0f}", "customers"),
+        ("Baseline / threshold", baseline_text, baseline_hint),
         ("Raw tickets in window", int(row["raw_tickets"]), "includes repeat submissions"),
         ("Tickets so far", len(seen), group_label(group)),
     ])
@@ -92,7 +103,13 @@ def render() -> None:
 
     left, right = st.columns([1, 1], gap="large")
     with left:
-        ui.render(_legend())
+        if src.is_demo:
+            ui.render(_legend())
+        else:
+            ui.render(ui.card("Reading the replay", "".join([
+                '<div class="sr-rule">■ <b>Observed ticket</b> · a record from the configured CSV</div>',
+                '<div class="sr-rule">Dashed red line = alert threshold · dotted grey = baseline · strip = detector state</div>',
+            ])))
     with right:
         seq = gtl[gtl["ts"] <= now].reset_index(drop=True)
         changes = seq[seq["state"] != seq["state"].shift()].iloc[1:] if len(seq) else seq
