@@ -1,52 +1,71 @@
 # SupportAI Radar
 
-### Intelligent Multilingual Support Routing & Incident Detection
+**Intelligent Multilingual Support Routing & Incident Detection**
 
-SupportAI Radar is a local-first support triage prototype that
-processes English and Hinglish customer support messages.
+SupportAI Radar is a local-first prototype for support ticket triage in English and Hinglish. It normalizes messages, extracts useful entities, predicts issue categories, routes uncertain cases for human review, scores urgency, suggests agent-assist replies, and flags unusual ticket-volume patterns as *potential incidents*.
 
-It helps support teams classify customer issues, assign urgency,
-recommend responses, and identify potential incidents when multiple
-customers report related problems.
+## Implemented capabilities
 
-## Core Features
+- Hinglish text normalization with an explainable lexicon
+- Entity extraction from raw ticket text
+- ML issue classification and confidence-based human-review routing
+- Taxonomy-based department mapping
+- Explainable urgency and priority scoring
+- Issue-specific reply suggestions and action checklists
+- Potential-incident detection using distinct-customer counts and historical windows
+- Evidence-based incident explanations and chronological replay
+- Held-out synthetic-template classifier evaluation and human-review threshold trade-offs
+- Streamlit dashboard with clearly separated live-input and synthetic-preview modes
+- Automated unit and dashboard tests
 
-- Hinglish text normalization
-- Rule-based entity extraction
-- Machine-learning-based issue classification
-- Department routing
-- Urgency and risk scoring
-- Human review for uncertain predictions
-- Suggested replies and action checklists
-- Explainable ticket decisions
-- Incident detection using unique customer counts
-- Simulated incident replay
-- Model evaluation and automated tests
+## Local setup (Windows / PowerShell)
 
-## Technology Stack
+Run these commands from the repository root:
 
-- Python
-- pandas and NumPy
-- scikit-learn
-- Streamlit
-- PyYAML
-- pytest
+```powershell
+py -3.12 -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install --upgrade pip
+pip install -r requirements.txt
+python -m pytest -q
+streamlit run app.py
+```
 
-## Execution
+If PowerShell blocks virtual-environment activation, use the Python executable directly:
+`\.venv\Scripts\python.exe -m pytest -q`.
 
-The prototype is designed to run locally on Windows using Streamlit.
+## Connect a ticket CSV
 
-It does not require paid APIs, cloud deployment, or a GPU.
+Set `SUPPORTAI_TICKETS_CSV` to a CSV file containing these required columns:
 
-## Project Status
+- `ticket_id` — unique ticket identifier
+- `customer_id` — stable customer identifier used for distinct-customer counts
+- `timestamp` — ticket creation timestamp
+- `raw_text` — original customer message
 
-Currently under development.
+Identifiers are read as strings to preserve leading zeroes. Optional source labels are not treated as model predictions. The dashboard generates its own predictions from `raw_text`.
 
-## Important Limitations
+Example PowerShell session:
 
-Incident alerts are based on support-ticket patterns and do not
-confirm an actual service outage or establish its root cause.
+```powershell
+$env:SUPPORTAI_TICKETS_CSV = "data/generated/replay_tickets.csv"
+streamlit run app.py
+```
 
-Synthetic data is used for prototype development and testing.
-Evaluation results should not be interpreted as proof of
-real-world performance.
+To clear the setting for the current terminal session:
+
+```powershell
+Remove-Item Env:SUPPORTAI_TICKETS_CSV
+```
+
+Use the sidebar's **Design preview** toggle to explore clearly labelled synthetic demo data. Live ticket data takes precedence over preview data.
+
+## Evaluation and limitations
+
+Classifier evaluation uses held-out synthetic templates. Templates are separated before variations are generated to reduce template-level leakage, but these metrics **do not establish real-world accuracy**. Priority ground-truth labels are not available, so critical-ticket precision and recall are not reported.
+
+Incident alerts are inferred from support-ticket patterns. They **do not confirm a real service outage or establish its root cause**. Baselines require sufficient consecutive historical windows; sparse or invalid timestamp data can limit detection.
+
+Playbooks are suggestions for human agents. They do not execute refunds, change orders, authenticate customers, or guarantee outcomes. Never collect passwords, PINs, OTPs, or full payment credentials in ticket text.
+
+This is a local prototype, not a production incident-management or customer-support system. Validate the classifier and operating thresholds on independently labelled, representative real-world data before operational use.
