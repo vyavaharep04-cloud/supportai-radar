@@ -39,6 +39,8 @@ def render() -> None:
                        "No numbers are shown until they have actually been measured.", interface=INTERFACE, icon="∑")
         return
     if src.is_demo:
+        # This is a demo result bundle, so expose its provenance before any
+        # metrics; tests and users can reliably distinguish it from live data.
         ui.demo_banner("Every number below is computed from synthetic labels with injected noise. It is not a measurement of any model.")
     ev = src.data
     labels = issue_labels(tx)
