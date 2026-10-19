@@ -26,6 +26,7 @@ from dashboard.contracts import (
     EntityView,
     EvaluationReport,
     IncidentView,
+    PlaybookView,
     ReplayData,
     TicketAnalysis,
     UrgencyFactor,
@@ -170,7 +171,7 @@ def analyze_ticket(text: str) -> TicketAnalysis:
         from supportai.playbooks import get_playbook
 
         item = get_playbook(classification.issue_id)
-        playbook = __import__("dashboard.contracts", fromlist=["PlaybookView"]).PlaybookView(
+        playbook = PlaybookView(
             playbook_id=item.playbook_id,
             reply=item.reply,
             checklist=item.checklist,
@@ -191,8 +192,7 @@ def normalizer_info() -> dict[str, str | int]:
     return {"version": normalizer.lexicon_version, "fingerprint": normalizer.lexicon_fingerprint}
 
 
-# -- CSV-backed ticket analysis. Other loaders stay disconnected until their
-# real detection/replay/evaluation algorithms are implemented. -----------------
+# -- CSV-backed ticket analysis and real-data adapters. -----------------------
 
 
 def _configured_ticket_path():
