@@ -9,7 +9,7 @@ Rules
 * Connecting a new module means editing ONE function below so that it returns
   the shapes defined in ``dashboard.contracts``.
 
-Currently connected: configured CSV ticket input, normalization, entity extraction, classification, taxonomy, review routing, urgency, and incident detection.
+Currently connected: configured CSV ticket input, normalization, entity extraction, classification, taxonomy, review routing, urgency, playbooks, incident detection/explanation, replay, and evaluation.
 """
 
 from __future__ import annotations
@@ -165,6 +165,17 @@ def analyze_ticket(text: str) -> TicketAnalysis:
         department_id = None
         urgency = None
 
+    playbook = None
+    if classification is not None and is_connected("playbooks"):
+        from supportai.playbooks import get_playbook
+
+        item = get_playbook(classification.issue_id)
+        playbook = __import__("dashboard.contracts", fromlist=["PlaybookView"]).PlaybookView(
+            playbook_id=item.playbook_id,
+            reply=item.reply,
+            checklist=item.checklist,
+        )
+
     return TicketAnalysis(
         raw_text=text,
         normalization=normalization,
@@ -172,6 +183,7 @@ def analyze_ticket(text: str) -> TicketAnalysis:
         classification=classification,
         department_id=department_id,
         urgency=urgency if classification is not None else None,
+        playbook=playbook,
     )
 def normalizer_info() -> dict[str, str | int]:
     """Version/fingerprint of the lexicon in use (shown in the decision trace)."""
@@ -306,7 +318,7 @@ def load_incidents() -> list[IncidentView] | None:
     if tickets is None or tickets.empty:
         return None
 
-    from supportai.incidents import detect_incidents, load_incident_params
+    from supportai.incidents import detect_incidents, explain_incident, load_incident_params
 
     detected = detect_incidents(tickets, **load_incident_params())
 
@@ -322,7 +334,7 @@ def load_incidents() -> list[IncidentView] | None:
             severity=item.severity,
             status=item.status,
             ticket_ids=item.ticket_ids,
-            explanation=item.explanation,
+            explanation=tuple(explain_incident(item)),
         )
         for item in detected
     ]
@@ -340,7 +352,7 @@ def load_replay() -> ReplayData | None:
 
 
 def load_evaluation() -> EvaluationReport | None:
-    """Return evaluation metrics only when the evaluation adapter is enabled."""
+    """Return measured synthetic held-out evaluation metrics."""
 
     if not is_connected("evaluation"):
         return None
