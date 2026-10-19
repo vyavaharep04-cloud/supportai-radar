@@ -81,8 +81,8 @@ def test_a_module_that_exists_without_an_adapter_is_not_reported_as_connected(mo
     assert caps["incidents"].connected
     assert caps["replay"].connected
     for key in ("playbooks", "incident_explainer", "evaluation"):
-        assert not caps[key].connected
-        assert "adapter is not written" in caps[key].detail
+        assert caps[key].connected
+        assert caps[key].detail == "Connected"
 
 
 def test_capability_keys_are_unique_and_cover_the_frozen_workflow():
@@ -121,11 +121,12 @@ def test_analyze_ticket_uses_real_backend_stages_and_invents_nothing():
     if analysis.classification.needs_human_review:
         assert analysis.department_id == "human_review"
 
-    # These stages have not been integrated yet.
-    # Urgency is integrated; playbooks are not yet integrated.
+    # Urgency and playbooks are integrated from real backend modules.
     assert analysis.urgency is not None
     assert analysis.urgency.priority in {"P1", "P2", "P3", "P4"}
-    assert analysis.playbook is None
+    assert analysis.playbook is not None
+    assert analysis.playbook.reply
+    assert analysis.playbook.checklist
 
 
 def test_entity_views_translates_every_entity_kind():
@@ -151,7 +152,7 @@ def test_entities_stage_is_none_when_the_module_is_not_connected(monkeypatch):
     assert backend.analyze_ticket("order ORD123456").entities is None
 
 
-@pytest.mark.parametrize("loader", ["load_tickets", "load_replay", "load_evaluation"])
+@pytest.mark.parametrize("loader", ["load_tickets", "load_replay"])
 def test_unconnected_loaders_return_none(loader):
     assert getattr(backend, loader)() is None
 
@@ -419,7 +420,7 @@ def test_live_mode_returns_no_data_when_nothing_is_connected():
         "st.write(repr([data_access.tickets(), data_access.incidents(), data_access.replay(), data_access.evaluation()]))\n"
     ).run()
     assert not at.exception
-    assert "[None, None, None, None]" in markdown_of(at)
+    assert "[None, None, None, True]" in markdown_of(at)
 
 
 def test_demo_data_is_always_marked_as_demo():
@@ -496,9 +497,12 @@ def test_live_mode_shows_no_demo_content_and_says_not_connected(page):
     md = markdown_of(at)
     assert not has_demo_banner(at)
     assert "DEMO DATA" not in md
-    if page != "analysis":
+    if page not in {"analysis", "evaluation"}:
         assert "connected" in md.lower()
-    assert len(at.dataframe) == 0  # no ticket/metric tables without a backend
+    if page != "evaluation":
+        assert len(at.dataframe) == 0  # no ticket tables without a ticket backend
+    else:
+        assert "Synthetic held-out template evaluation" in md
 
 
 @pytest.mark.parametrize("page", [p for p in PAGES if p != "analysis"])
@@ -544,9 +548,9 @@ def test_analysis_runs_live_normalization_and_marks_unconnected_stages():
     # Classification is now connected.
     assert "NOT CONNECTED" in md  # Some stages remain unconnected.
 
-    # Urgency and playbooks are still unconnected.
+    # Urgency and playbooks are connected; remaining unavailable stages are explicit.
     assert "Urgency" in md
-    assert "Playbook" in md
+    assert "Suggested reply" in md
 
 
 def test_analysis_shows_real_extracted_entities_as_chips():
