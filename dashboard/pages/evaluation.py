@@ -32,6 +32,14 @@ def render() -> None:
     src = data_access.evaluation()
     ui.page_header("Evaluation", "Classification quality, critical-ticket safety, human-review trade-offs and incident-detection behaviour.",
                    badges=[ui.provenance_badge("off" if src is None else "demo" if src.is_demo else "live")])
+    if src is not None and src.is_demo:
+        # Always expose provenance early in the page, even if later sections
+        # have no incident scenarios to display.
+        st.markdown(
+            "**DEMO DATA — synthetic evaluation preview.** "
+            "Every metric below is computed from synthetic labels with injected noise; "
+            "these are not model predictions and do not establish real-world accuracy."
+        )
     ui.callout(CAVEAT, "warning")
     if src is None:
         ui.empty_state("No evaluation results yet",
