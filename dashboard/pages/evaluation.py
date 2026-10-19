@@ -50,7 +50,7 @@ def render() -> None:
     labels = issue_labels(tx)
     if ev.dataset_note:
         ui.mini("Data: " + ev.dataset_note)
-        kpis = [
+    kpis = [
         ("Accuracy", f"{ev.accuracy:.1%}", "all issue types"),
         ("Macro F1", f"{ev.macro_f1:.3f}", "mean over issue types"),
     ]
