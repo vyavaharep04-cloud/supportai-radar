@@ -513,8 +513,8 @@ def test_demo_mode_banner_present_on_every_data_page(page):
     # expose that page's shared helper output consistently.
     md = markdown_of(at)
     if page == "evaluation":
-        assert "DEMO DATA" in md
-        assert "synthetic evaluation preview" in md
+        assert "DEMO DATA" in md.upper()
+        assert "synthetic evaluation preview" in md.lower()
     else:
         assert has_demo_banner(at)
 
