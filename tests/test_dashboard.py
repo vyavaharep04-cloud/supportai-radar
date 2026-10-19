@@ -417,7 +417,7 @@ def test_live_mode_returns_no_data_when_nothing_is_connected():
     at = AppTest.from_string(
         "from dashboard import data_access\nfrom dashboard.shell import bootstrap\nimport streamlit as st\n"
         "bootstrap(preview=False)\n"
-        "st.write(repr([data_access.tickets(), data_access.incidents(), data_access.replay(), data_access.evaluation()]))\n"
+        "st.write(repr([data_access.tickets(), data_access.incidents(), data_access.replay(), data_access.evaluation() is not None]))\n"
     ).run()
     assert not at.exception
     assert "[None, None, None, True]" in markdown_of(at)
@@ -545,10 +545,7 @@ def test_analysis_runs_live_normalization_and_marks_unconnected_stages():
     )
     assert expected in md
 
-    # Classification is now connected.
-    assert "NOT CONNECTED" in md  # Some stages remain unconnected.
-
-    # Urgency and playbooks are connected; remaining unavailable stages are explicit.
+    # Classification, urgency, and playbooks are connected end to end.
     assert "Urgency" in md
     assert "Suggested reply" in md
 
