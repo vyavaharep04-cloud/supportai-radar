@@ -39,9 +39,10 @@ def render() -> None:
                        "No numbers are shown until they have actually been measured.", interface=INTERFACE, icon="∑")
         return
     if src.is_demo:
-        # Render provenance as normal text so AppTest and users both see it.
-        st.info(
-            "DEMO DATA — synthetic evaluation preview. "
+        # Emit the demo provenance as plain Markdown; AppTest collects this
+        # consistently, unlike HTML-backed helpers and alert components.
+        st.markdown(
+            "**DEMO DATA — synthetic evaluation preview.** "
             "Every metric below is computed from synthetic labels with injected noise; "
             "these are not model predictions and do not establish real-world accuracy."
         )
