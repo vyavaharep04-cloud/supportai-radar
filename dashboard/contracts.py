@@ -217,7 +217,7 @@ CAPABILITY_SPECS: tuple[CapabilitySpec, ...] = (
     "score_urgency(raw_text, issue_type, repeat_contact=False) -> UrgencyResult",
     ),
     CapabilitySpec(
-        "playbooks", "Playbook replies & checklists", "ASSIST", "supportai.playbooks", False,
+        "playbooks", "Playbook replies & checklists", "ASSIST", "supportai.playbooks", True,
         "get_playbook(issue_id) -> Playbook",
     ),
     CapabilitySpec(
@@ -225,7 +225,7 @@ CAPABILITY_SPECS: tuple[CapabilitySpec, ...] = (
         "detect_incidents(tickets) -> list[Incident]",
     ),
     CapabilitySpec(
-        "incident_explainer", "Incident explanation", "ACT", "supportai.incidents", False,
+        "incident_explainer", "Incident explanation", "ACT", "supportai.incidents", True,
         "explain_incident(incident) -> list[str]",
     ),
     CapabilitySpec(
@@ -233,7 +233,7 @@ CAPABILITY_SPECS: tuple[CapabilitySpec, ...] = (
         "run_replay(scenario) -> ReplayResult",
     ),
     CapabilitySpec(
-        "evaluation", "Evaluation & metrics", "QUALITY", "supportai.evaluation", False,
+        "evaluation", "Evaluation & metrics", "QUALITY", "supportai.evaluation", True,
         "evaluate() -> EvaluationResult",
     ),
 )
