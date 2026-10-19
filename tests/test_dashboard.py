@@ -511,8 +511,10 @@ def test_demo_mode_banner_present_on_every_data_page(page):
     assert not at.exception, [str(e.value)[:300] for e in at.exception]
     md = markdown_of(at)
     if page == "evaluation":
-        assert "DEMO DATA" in md.upper()
-        assert "synthetic evaluation preview" in md.lower()
+        # The evaluation page has a separate provenance contract: the actual
+        # source badge and synthetic dataset note identify preview provenance.
+        assert "Computed from synthetic demo labels" in md
+        assert "Not a measurement of any model" in md
     else:
         assert has_demo_banner(at)
 
