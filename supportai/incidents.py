@@ -235,3 +235,19 @@ def load_incident_params(
     params["alert_ratio"] = float(params["alert_ratio"])
 
     return params
+
+
+
+def explain_incident(incident: Incident) -> list[str]:
+    """Return evidence-based explanation lines for a potential incident.
+
+    The explanation reports observed ticket-volume evidence only; it must not
+    imply that an outage or root cause has been confirmed.
+    """
+    if not isinstance(incident, Incident):
+        raise TypeError("incident must be an Incident instance")
+    lines = [str(line).strip() for line in incident.explanation if str(line).strip()]
+    disclaimer = "This is a potential incident inferred from ticket volume, not a confirmed outage."
+    if not any("not a confirmed outage" in line.lower() for line in lines):
+        lines.append(disclaimer)
+    return lines
