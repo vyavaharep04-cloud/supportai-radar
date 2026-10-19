@@ -509,12 +509,13 @@ def test_live_mode_shows_no_demo_content_and_says_not_connected(page):
 def test_demo_mode_banner_present_on_every_data_page(page):
     at = run_page(page, preview=True)
     assert not at.exception, [str(e.value)[:300] for e in at.exception]
-    # Evaluation emits a direct Streamlit HTML marker because AppTest does not
-    # expose that page's shared helper output consistently.
     md = markdown_of(at)
     if page == "evaluation":
-        assert "DEMO DATA" in md.upper()
-        assert "synthetic evaluation preview" in md.lower()
+        # st.info is an alert element, not a Markdown element, so inspect the
+        # AppTest info collection instead of searching markdown_of(at).
+        info_text = "\\n".join(str(element.value) for element in at.info)
+        assert "DEMO DATA" in info_text.upper()
+        assert "synthetic evaluation preview" in info_text.lower()
     else:
         assert has_demo_banner(at)
 
