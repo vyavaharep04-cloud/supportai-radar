@@ -46,14 +46,6 @@ def render() -> None:
                        "Metrics appear here after the classifier and incident detector have been evaluated. "
                        "No numbers are shown until they have actually been measured.", interface=INTERFACE, icon="∑")
         return
-    if src.is_demo:
-        # Emit the demo provenance as plain Markdown; AppTest collects this
-        # consistently, unlike HTML-backed helpers and alert components.
-        st.markdown(
-            "**DEMO DATA — synthetic evaluation preview.** "
-            "Every metric below is computed from synthetic labels with injected noise; "
-            "these are not model predictions and do not establish real-world accuracy."
-        )
     ev = src.data
     labels = issue_labels(tx)
     if ev.dataset_note:
