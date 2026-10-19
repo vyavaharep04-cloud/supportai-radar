@@ -511,11 +511,8 @@ def test_demo_mode_banner_present_on_every_data_page(page):
     assert not at.exception, [str(e.value)[:300] for e in at.exception]
     md = markdown_of(at)
     if page == "evaluation":
-        # st.info is an alert element, not a Markdown element, so inspect the
-        # AppTest info collection instead of searching markdown_of(at).
-        info_text = "\\n".join(str(element.value) for element in at.info)
-        assert "DEMO DATA" in info_text.upper()
-        assert "synthetic evaluation preview" in info_text.lower()
+        assert "DEMO DATA" in md.upper()
+        assert "synthetic evaluation preview" in md.lower()
     else:
         assert has_demo_banner(at)
 
