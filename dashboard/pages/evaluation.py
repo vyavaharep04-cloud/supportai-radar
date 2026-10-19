@@ -39,10 +39,14 @@ def render() -> None:
                        "No numbers are shown until they have actually been measured.", interface=INTERFACE, icon="∑")
         return
     if src.is_demo:
-        # This is a demo result bundle, so expose its provenance before any
-        # metrics; tests and users can reliably distinguish it from live data.
-        ui.demo_banner("Every number below is computed from synthetic labels with injected noise. It is not a measurement of any model.")
-        st.markdown('<div class="sr-demo-banner"><b>DEMO DATA</b> — synthetic evaluation preview; these metrics are not model predictions.</div>', unsafe_allow_html=True)
+        # Keep the provenance as plain Markdown text. Streamlit AppTest exposes
+        # Markdown elements consistently, while nested HTML helper output can
+        # be omitted from its markdown collection on this page.
+        st.warning(
+            "**DEMO DATA — SYNTHETIC EVALUATION PREVIEW.** "
+            "Every metric below is computed from synthetic labels with injected noise; "
+            "these are not model predictions and do not establish real-world accuracy."
+        )
     ev = src.data
     labels = issue_labels(tx)
     if ev.dataset_note:
