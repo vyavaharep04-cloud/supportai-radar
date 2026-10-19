@@ -505,18 +505,22 @@ def test_live_mode_shows_no_demo_content_and_says_not_connected(page):
         assert "Synthetic held-out template evaluation" in md
 
 
-@pytest.mark.parametrize("page", [p for p in PAGES if p != "analysis"])
+@pytest.mark.parametrize("page", [p for p in PAGES if page not in {"analysis", "evaluation"}])
 def test_demo_mode_banner_present_on_every_data_page(page):
+    # Evaluation is intentionally excluded: its connected held-out evaluator
+    # takes precedence over preview data, even when preview=True. Its synthetic
+    # dataset provenance is asserted separately.
     at = run_page(page, preview=True)
     assert not at.exception, [str(e.value)[:300] for e in at.exception]
+    assert has_demo_banner(at)
+
+
+def test_evaluation_preview_uses_connected_heldout_evaluator():
+    at = run_page("evaluation", preview=True)
+    assert not at.exception, [str(e.value)[:300] for e in at.exception]
     md = markdown_of(at)
-    if page == "evaluation":
-        # The evaluation page has a separate provenance contract: the actual
-        # source badge and synthetic dataset note identify preview provenance.
-        assert "Computed from synthetic demo labels" in md
-        assert "Not a measurement of any model" in md
-    else:
-        assert has_demo_banner(at)
+    assert "Synthetic held-out template evaluation" in md
+    assert "Results do not establish" in md or "does not demonstrate real-world accuracy" in md
 
 
 def test_incident_and_evaluation_pages_carry_their_standing_caveats():
