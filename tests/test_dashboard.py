@@ -505,7 +505,7 @@ def test_live_mode_shows_no_demo_content_and_says_not_connected(page):
         assert "Synthetic held-out template evaluation" in md
 
 
-@pytest.mark.parametrize("page", [p for p in PAGES if page not in {"analysis", "evaluation"}])
+@pytest.mark.parametrize("page", [p for p in PAGES if p not in {"analysis", "evaluation"}])
 def test_demo_mode_banner_present_on_every_data_page(page):
     # Evaluation is intentionally excluded: its connected held-out evaluator
     # takes precedence over preview data, even when preview=True. Its synthetic
