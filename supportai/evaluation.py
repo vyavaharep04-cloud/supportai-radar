@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from functools import lru_cache
 from typing import Any
 
 import pandas as pd
@@ -21,6 +22,7 @@ EVALUATION_SEED = 20261012
 DEFAULT_THRESHOLDS = (0.40, 0.50, 0.60, 0.70, 0.80)
 
 
+@lru_cache(maxsize=1)
 def evaluate_classifier(
     thresholds: tuple[float, ...] = DEFAULT_THRESHOLDS,
 ) -> dict[str, Any]:
